@@ -1,5 +1,7 @@
 ## Local LLM for NixOS Optimizated for RX 6800xt / 7900x / 16gb of ram
 
+!(./image.png)[image]
+
 ### Download QWEN 3.5 35B Unsloth Dynamic Q4 K-Quant Extra Large
 
 Model: https://huggingface.co/unsloth/Qwen3.5-35B-A3B-GGUF 

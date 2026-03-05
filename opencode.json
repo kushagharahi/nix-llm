@@ -1,0 +1,22 @@
+{
+    "$schema": "https://opencode.ai/config.json",
+    "provider": {
+        "llama-local": {
+            "npm": "@ai-sdk/openai-compatible",
+            "name": "llama-server (local)",
+            "options": {
+                "baseURL": "http://127.0.0.1:8001/v1",
+                "apiKey": "local-only"
+            },
+            "models": {
+                "qwen3.5-35b": {
+                    "name": "Qwen 3.5 35B (Local ROCm)",
+                    "limit": {
+                        "context": 16384,
+                        "output": 4096
+                    }
+                }
+            }
+        }
+    }
+}
