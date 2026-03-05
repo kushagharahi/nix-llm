@@ -1,6 +1,8 @@
-## Local LLM for NixOS Optimizated for RX 6800xt / 7900x / 16gb of ram
+# Local LLM for NixOS
 
-!(./image.png)[image]
+Optimized for RX 6800XT / 7900X / 16GB of RAM
+
+![image](./image.png)
 
 ### Download QWEN 3.5 35B Unsloth Dynamic Q4 K-Quant Extra Large
 
@@ -20,7 +22,7 @@ nix shell nixpkgs#huggingface-hub -c huggingface-cli download \
 
 We run it with memlock unlimited to prevent writing to disk and keep everything in memory
 
-This starts a server on `:8001`
+This starts a llama server on `:8001` and runs opencode pointing to that llama server
 
 
 ### What do the different inputs to `llama.cpp` mean?
