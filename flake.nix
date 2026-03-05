@@ -37,7 +37,7 @@
 
         echo "🚀 Starting Qwen 3.5 API Server on http://127.0.0.1:8001"
 
-          exec llama-cli \
+          exec llama-server \
             -m ./models/Qwen3.5-35B-A3B-UD-Q4_K_XL.gguf \
             --ctx-size 16384 \
             --n-gpu-layers 20 \

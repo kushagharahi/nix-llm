@@ -1,6 +1,6 @@
 ## Local LLM for NixOS Optimizated for RX 6800xt / 7900x / 16gb of ram
 
-# Download QWEN 3.5 35B Unsloth Dynamic Q4 K-Quant Extra Large
+### Download QWEN 3.5 35B Unsloth Dynamic Q4 K-Quant Extra Large
 
 Model: https://huggingface.co/unsloth/Qwen3.5-35B-A3B-GGUF 
 
@@ -12,19 +12,20 @@ nix shell nixpkgs#huggingface-hub -c huggingface-cli download \
   --local-dir ./models
 ```
 
-## Run the LLM 
+### Run the LLM 
 
 `sudo prlimit --memlock=unlimited:unlimited nix develop`
 
 We run it with memlock unlimited to prevent writing to disk and keep everything in memory
 
+This starts a server on `:8001`
 
-What do the different inputs to `llama.cpp` mean?
+
+### What do the different inputs to `llama.cpp` mean?
 
 | Flag | Function | Benefit for Setup |
 | :--- | :--- | :--- |
 | `-m` | **Model Path** | Loads the 22GB file directly from the file system. |
-| `-cnv` | **Conversation** | Enables chat mode with automated user/AI turn handling. |
 | `--ctx-size 16384` | **Context Window** | Sets short-term memory; uses ~2-4GB VRAM for 16k tokens. |
 | `--n-gpu-layers 20` | **GPU Offload** | Reduced to 20 to prevent VRAM overflow and driver timeout on 16GB cards. |
 | `--flash-attn off` | **Flash Attention** | Disabled to prevent the `GGML_ASSERT` crash on ROCm/RDNA2. |
@@ -32,5 +33,3 @@ What do the different inputs to `llama.cpp` mean?
 | `--batch-size 1024` | **Logical Batch** | Max tokens processed in parallel during prompt ingestion. |
 | `--mlock` | **Memory Locking** | Pins model to physical RAM to prevent SSD swap/wear. |
 | `--threads 12` | **CPU Threads** | Matches the 12 CPU cores for hybrid processing. |
-| `--jinja` | **Jinja2 Template** | Uses specific chat formatting to prevent logic errors. |
-| `-p` | **Prompt** | Defines the system instructions and AI personality. |
