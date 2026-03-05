@@ -1,6 +1,7 @@
 # Local LLM for NixOS
 
 Optimized for RX 6800XT / 7900X / 16GB of RAM
+Runs QWEN 3.5 35B and OpenCode
 
 ![image](./image.png)
 
@@ -18,7 +19,11 @@ nix shell nixpkgs#huggingface-hub -c huggingface-cli download \
 
 ### Run the LLM 
 
-`sudo prlimit --memlock=unlimited:unlimited nix develop`
+```
+sudo prlimit --memlock=unlimited:unlimited 
+nix develop ~/path/to/this/repo/nix-llm
+```
+
 
 We run it with memlock unlimited to prevent writing to disk and keep everything in memory
 
