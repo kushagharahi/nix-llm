@@ -21,34 +21,30 @@
       # This pulls the default ROCm stack (e.g., 6.0 or 6.1)
       rocmPackages = pkgs.rocmPackages;
     };
+
+    opencode-latest = pkgs.stdenv.mkDerivation {
+      pname = "opencode";
+      version = "1.2.17";
+      src = pkgs.fetchurl {
+        url = "https://github.com/anomalyco/opencode/releases/download/v1.2.17/opencode-linux-x64";
+        sha256 = "sha256-715b844c2a88810b6178d7a2467c7d36ea8fb764"; # See Step 2 below
+      };
+      phases = ["installPhase"];
+      installPhase = ''
+        mkdir -p $out/bin
+        cp $src $out/bin/opencode
+        chmod +x $out/bin/opencode
+      '';
+    };
   in {
     devShells.${system}.default = pkgs.mkShell {
-      buildInputs = [llama-amd];
+      buildInputs = [
+        llama-amd
+        opencode-latest
+        pkgs.curl
+      ];
 
-      shellHook = ''
-          # Tell the driver to treat 6800 XT like a professional Radeon Pro V620, which uses the same gfx1030 architecture.
-          export HSA_OVERRIDE_GFX_VERSION=10.3.0
-
-          # Optimization: On RDNA2, compute units are grouped into "Workgroup Processors." Disabling this forces the compiler to schedule tasks at the individual Compute Unit (CU) level. For LLMs, this usually results in more granular, efficient math.
-          export GPU_ENABLE_WGP_MODE=0
-
-          # Ignore iGPU of 7900x
-          export HIP_VISIBLE_DEVICES=0
-
-        echo "🚀 Starting Qwen 3.5 API Server on http://127.0.0.1:8001"
-
-          exec llama-server \
-            -m ./models/Qwen3.5-35B-A3B-UD-Q4_K_XL.gguf \
-            --ctx-size 16384 \
-            --n-gpu-layers 20 \
-            --ubatch-size 1024 \
-            --batch-size 1024 \
-            --flash-attn off \
-            --mlock \
-            --threads 12 \
-            --host 127.0.0.1 \
-            --port 8001
-      '';
+      shellHook = "source ./run.sh";
     };
   };
 }
