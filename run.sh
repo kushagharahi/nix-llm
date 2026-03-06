@@ -29,7 +29,7 @@ llama-server \
     --batch-size 512 \
     --flash-attn off \
     --mlock \
-    --threads $(nproc) \
+    --threads 16 \
     --temp 0.6 \
     --top-p 0.95 \
     --top-k 20 \

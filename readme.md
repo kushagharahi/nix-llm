@@ -23,13 +23,19 @@ nix shell nixpkgs#python313Packages.huggingface-hub -c huggingface-cli download 
 nix develop ~/path/to/this/repo/nix-llm
 ```
 
-If on nixos -- run it with memlock unlimited to prevent writing to disk and keep everything in memory
-```
-sudo prlimit --memlock=unlimited:unlimited 
-nix develop ~/path/to/this/repo/nix-llm
-```
-
 This starts a llama server on `:8001` and runs opencode pointing to that llama server
+
+### Environment Variables
+
+| Variable | Function |
+| :--- | :--- |
+| `HIP_VISIBLE_DEVICES=0` | Ignore iGPU of 7900X |
+| `GPU_ENABLE_WGP_MODE=0` | Forces scheduling at individual Compute Unit level for more efficient math |
+| `HSA_OVERRIDE_GFX_VERSION=10.3.0` | Treats 6800 XT like Radeon Pro V620 (same gfx1030 architecture) |
+
+### Cleanup
+
+The script handles graceful shutdown on Ctrl+C, killing the llama server and cleaning up GPU resources.
 
 
 ### What do the different inputs to `llama.cpp` mean?

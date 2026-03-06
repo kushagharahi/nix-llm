@@ -5,6 +5,7 @@
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
     opencode.url = "github:anomalyco/opencode/v1.2.17";
     # Change back to llama.cpp once https://github.com/ggml-org/llama.cpp/pull/20158 is merged
+    # llama-cpp-repo.url = "github:ggml-org/llama.cpp/b8212";
     llama-cpp-repo.url = "path:/home/kusha/projects/llama.cpp";
   };
 
@@ -31,10 +32,11 @@
           ++ [
             "-DAMDGPU_TARGETS=gfx1030" # rt6800xt architecture aka RDNA2
             "-DGGML_HIP_ROCWMMA=ON" # rocWMMA (Radeon Open Compute Wavefront Matrix Multiply-Accumulate)
-            "-DGGML_HIP_ROCWMMA_FATTN=ON" # flash attentio
+            "-DGGML_HIP_ROCWMMA_FATTN=OFF" # flash attention. Not for RDNA2 :(
             "-DCMAKE_HIP_ARCHITECTURES=gfx1030"
             "-DAMDGPU_TARGETS=gfx1030"
             "-DCMAKE_HIP_FLAGS=-I${pkgs.rocmPackages.rocwmma}/include"
+            # Wont work on official llama.cpp until https://github.com/ggml-org/llama.cpp/pull/20158 is merged
             "-DLLAMA_BUILD_WEBUI=OFF"
           ];
 
