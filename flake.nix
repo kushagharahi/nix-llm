@@ -3,7 +3,7 @@
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
-    opencode.url = "github:anomalyco/opencode/v1.2.17";
+    opencode.url = "github:anomalyco/opencode/v1.2.20";
     llama-cpp-repo.url = "path:/home/kusha/projects/llama.cpp";
   };
 
