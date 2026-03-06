@@ -12,7 +12,7 @@
                 "qwen3.5-35b": {
                     "name": "Qwen 3.5 35B (Local ROCm)",
                     "limit": {
-                        "context": 16384,
+                        "context": 32768,
                         "output": 4096
                     }
                 }

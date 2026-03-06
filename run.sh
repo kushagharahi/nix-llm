@@ -20,15 +20,16 @@ echo "🚀 Starting Qwen 3.5 API Server on http://127.0.0.1:8001"
 HIP_VISIBLE_DEVICES=0 GPU_ENABLE_WGP_MODE=0 HSA_OVERRIDE_GFX_VERSION=10.3.0 \
 llama-server \
     -m ./models/Qwen3.5-35B-A3B-UD-Q4_K_XL.gguf \
-    --ctx-size 16384 \
-    --n-gpu-layers 22 \
-    --n-cpu-moe 18 \
+    --ctx-size 32768 \
+    --n-gpu-layers 16 \
+    --n-cpu-moe 20 \
     --ubatch-size 512 \
     --batch-size 512 \
     --flash-attn off \
     --parallel 1 \
     --fit-target 1024 \
     --mlock \
+    --no-mmap \
     --threads 11 \
     --temp 0.6 \
     --top-p 0.95 \
@@ -37,6 +38,7 @@ llama-server \
     --presence_penalty 0.0 \
     --frequency_penalty 1.0 \
     --repeat_penalty 1.1 \
+    --jinja \
     --no-webui \
     --host 127.0.0.1 \
     --port 8001 &> llama.log &
