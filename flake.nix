@@ -4,8 +4,6 @@
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
     opencode.url = "github:anomalyco/opencode/v1.2.17";
-    # Change back to llama.cpp once https://github.com/ggml-org/llama.cpp/pull/20158 is merged
-    # llama-cpp-repo.url = "github:ggml-org/llama.cpp/b8212";
     llama-cpp-repo.url = "path:/home/kusha/projects/llama.cpp";
   };
 
@@ -26,6 +24,16 @@
         rocmSupport = true;
       }).overrideAttrs (oldAttrs: {
         src = llama-cpp-repo;
+
+        # version must be an integer string for C++ LLAMA_BUILD_NUMBER
+        version = "0";
+
+        # Disable WebUI build and npm dependencies to fix local source hash mismatch
+        npmDeps = null;
+        nativeBuildInputs = pkgs.lib.filter (
+          p:
+            !(p ? pname && (p.pname == "nodejs" || p.pname == "npm-config-hook"))
+        ) (oldAttrs.nativeBuildInputs or []);
 
         cmakeFlags =
           oldAttrs.cmakeFlags
@@ -55,6 +63,7 @@
         preConfigure = ''
           export GPU_TARGETS="gfx1030"
           export AMDGPU_TARGETS="gfx1030"
+          echo "0000000" > COMMIT
         '';
 
         appendRunpaths = ["${placeholder "out"}/lib"];
