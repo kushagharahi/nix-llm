@@ -36,6 +36,7 @@ llama-server \
     --min-p 0.00 \
     --presence_penalty 0.0 \
     --frequency_penalty 1.0 \
+    --repeat_penalty 1.1 \
     --no-webui \
     --host 127.0.0.1 \
     --port 8001 &> llama.log &
