@@ -31,13 +31,14 @@
           oldAttrs.cmakeFlags
           ++ [
             "-DAMDGPU_TARGETS=gfx1030" # rt6800xt architecture aka RDNA2
+            "-DGGML_HIP=ON"
             "-DGGML_HIP_ROCWMMA=ON" # rocWMMA (Radeon Open Compute Wavefront Matrix Multiply-Accumulate)
             "-DGGML_HIP_ROCWMMA_FATTN=OFF" # flash attention. Not for RDNA2 :(
-            "-DCMAKE_HIP_ARCHITECTURES=gfx1030"
-            "-DAMDGPU_TARGETS=gfx1030"
+            "-DCMAKE_HIP_ARCHITECTURES=gfx1030" # rt6800xt architecture aka RDNA2
             "-DCMAKE_HIP_FLAGS=-I${pkgs.rocmPackages.rocwmma}/include"
+            "-DCMAKE_BUILD_TYPE=Release"
             # Wont work on official llama.cpp until https://github.com/ggml-org/llama.cpp/pull/20158 is merged
-            "-DLLAMA_BUILD_WEBUI=OFF"
+            "-DLLAMA_BUILD_WEBUI=OFF" # Don't bundle webui
           ];
 
         # Ensure all necessary ROCm libraries are present

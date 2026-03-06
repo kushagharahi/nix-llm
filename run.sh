@@ -14,9 +14,6 @@ cleanup() {
 trap cleanup INT EXIT TERM
 
 echo "🚀 Starting Qwen 3.5 API Server on http://127.0.0.1:8001"
-
-sudo prlimit --memlock=unlimited:unlimited 
-
     # HIP_VISIBLE_DEVICES=0 -- Ignore iGPU of 7900x
     # GPU_ENABLE_WGP_MODE=0 -- On RDNA2, compute units are grouped into "Workgroup Processors." Disabling this forces the compiler to schedule tasks at the individual Compute Unit (CU) level. For LLMs, this usually results in more granular, efficient math.
     # HSA_OVERRIDE_GFX_VERSION=10.3.0 -- Tell the driver to treat 6800 XT like a professional Radeon Pro V620, which uses the same gfx1030 architecture.
@@ -25,11 +22,13 @@ llama-server \
     -m ./models/Qwen3.5-35B-A3B-UD-Q4_K_XL.gguf \
     --ctx-size 16384 \
     --n-gpu-layers 22 \
-    --ubatch-size 512 \
-    --batch-size 512 \
+    --n-cpu-moe 18 \
+    --ubatch-size 1024 \
+    --batch-size 1024 \
     --flash-attn off \
+    --parallel 1 \
     --mlock \
-    --threads 16 \
+    --threads 11 \
     --temp 0.6 \
     --top-p 0.95 \
     --top-k 20 \

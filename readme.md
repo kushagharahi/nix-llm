@@ -45,8 +45,8 @@ The script handles graceful shutdown on Ctrl+C, killing the llama server and cle
 | `-m` | **Model Path** | Loads the 22GB file directly from the file system. |
 | `--ctx-size 16384` | **Context Window** | Sets short-term memory; uses ~2-4GB VRAM for 16k tokens. |
 | `--n-gpu-layers 22` | **GPU Offload** | Offload 22 layers to GPU for faster inference. |
-| `--ubatch-size 512` | **Physical Batch** | Size of data chunks sent to GPU cores at once. |
-| `--batch-size 512` | **Logical Batch** | Max tokens processed in parallel during prompt ingestion. |
+| `--ubatch-size 1024` | **Physical Batch** | Size of data chunks sent to GPU cores at once. |
+| `--batch-size 1024` | **Logical Batch** | Max tokens processed in parallel during prompt ingestion. |
 | `--flash-attn off` | **Flash Attention** | Disabled to prevent the `GGML_ASSERT` crash on ROCm/RDNA2. |
 | `--mlock` | **Memory Locking** | Pins model to physical RAM to prevent SSD swap/wear. |
 | `--threads` | **CPU Threads** | Uses all available CPU cores. |
