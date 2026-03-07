@@ -6,7 +6,7 @@ cleanup() {
     trap - EXIT INT TERM
 
     echo -e "\n\n🛑 OpenCode closed. Cleaning up GPU resources..."
-    # Kill the llama server specifically
+    # Kill the llama server specifically  
     [ -n "$LLAMA_PID" ] && kill $LLAMA_PID 2>/dev/null
     exit 0
 }
@@ -20,7 +20,7 @@ echo "🚀 Starting Qwen 3.5 API Server on http://127.0.0.1:8001"
 HIP_VISIBLE_DEVICES=0 GPU_ENABLE_WGP_MODE=0 HSA_OVERRIDE_GFX_VERSION=10.3.0 \
 llama-server \
     -m ./models/Qwen3.5-35B-A3B-UD-Q4_K_XL.gguf \
-    --ctx-size 32768 \
+    --ctx-size 25000 \
     --n-gpu-layers 16 \
     --n-cpu-moe 20 \
     --ubatch-size 512 \
