@@ -9,8 +9,8 @@
                 "apiKey": "local-only"
             },
             "models": {
-                "qwen3.5": {
-                    "name": "Qwen 3.5",
+                "qwen3.5-27b": {
+                    "name": "Qwen 3.5 27B",
                     "limit": {
                         "context": 25000,
                         "output": 4096

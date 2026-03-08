@@ -5,11 +5,18 @@ Runs QWEN 3.5 35B and OpenCode
 
 ![image](./image.png)
 
-### Download QWEN 3.5 35B Unsloth Dynamic Q4 K-Quant Extra Large
+### Download a model
+
+First, download the model to `/models`:
+
+### QWEN 3.5 35B 3B active parameter Unsloth Dynamic Q4 K-Quant Extra Large
 
 Model: https://huggingface.co/unsloth/Qwen3.5-35B-A3B-GGUF 
 
-First, download the model to `/models`:
+Very fast, but only considers 3B params at a time (A3B = active params 3B) aka (Mixture of Experts) MoE. THe model tries to get the expert with the most relevant 3B params
+
+//todo explain 4 bit quantization
+
 ```
 nix shell nixpkgs#python313Packages.huggingface-hub -c huggingface-cli download \
   unsloth/Qwen3.5-35B-A3B-GGUF \
@@ -17,10 +24,24 @@ nix shell nixpkgs#python313Packages.huggingface-hub -c huggingface-cli download 
   --local-dir ./models
 ```
 
+### QWEN 27B
+
+Dense, slow, but smart
+// TODO: Also explain 4 bit quant
+// TODO: HF link
+
+```
+nix shell nixpkgs#python313Packages.huggingface-hub -c huggingface-cli download \  
+  unsloth/Qwen3.5-27B-GGUF \
+  Qwen3.5-27B-Q4_K_M.gguf  \
+  --local-dir ./models
+```
+
+
 ### Run the LLM 
 
 ```
-nix develop ~/path/to/this/repo/nix-llm
+nix develop
 ```
 
 This starts a llama server on `:8001` and runs opencode pointing to that llama server

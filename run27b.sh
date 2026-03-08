@@ -28,19 +28,15 @@ llama-server \
     --ubatch-size 512 \
     --batch-size 512 \
     --flash-attn off \
+    --threads 11 \
     --parallel 1 \
     --fit-target 1024 \
     --mlock \
     --no-mmap \
-    --threads 11 \
     --temp 0.6 \
-    --top-p 0.95 \
     --top-k 20 \
-    --min-p 0.00 \
-    --presence_penalty 0.0 \
-    --frequency_penalty 1.0 \
-    --repeat_penalty 1.1 \
-    --jinja \
+    --frequency-penalty 1.0 \
+    --repeat-penalty 1.1 \
     --no-webui \
     --host 127.0.0.1 \
     --port 8001 &> llama.log &
