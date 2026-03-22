@@ -1,7 +1,7 @@
 # Local LLM for NixOS
 
 Optimized for RX 6800XT / 7900X / 32GB of RAM
-Runs QWEN 3.5 35B and OpenCode
+Runs QWEN 3.5 35B and [pi.dev](https://pi.dev)
 
 ![image](./image.png)
 
@@ -54,7 +54,7 @@ For Qwen 27B:
 ./run27b.sh
 ```
 
-Both start a llama server on `http://127.0.0.1:8001` and run opencode pointing to that llama server
+Both start a llama server on `http://127.0.0.1:8001` and run pi pointing to that llama server
 
 ### Environment Variables (AMD GPU)
 
@@ -88,4 +88,4 @@ Both start a llama server on `http://127.0.0.1:8001` and run opencode pointing t
 | `--presence_penalty 0.0`          | Presence penalty score        | No repetition bias applied, allows diverse responses                                                |
 | `--frequency_penalty 1.0`         | Frequency penalty score       | Strongly discourages repeated tokens for variety                                                    |
 | `--repeat_penalty 1.1`            | Repeat penalty multiplier     | Moderate reinforcement against token repetition                                                     |
-| `--no-webui`                      | Web UI toggle                 | CLI-only mode reduces resource overhead when using opencode interface                               |
+| `--no-webui`                      | Web UI toggle                 | CLI-only mode reduces resource overhead when using pi interface                                     |
