@@ -16,23 +16,20 @@ cleanup() {
 # Trap exit signals (Ctrl+C, script end, etc.)   
 trap cleanup INT EXIT TERM
 
-echo "🚀 Starting Qwen 3.5 API Server on http://127.0.0.1:8001"  
-    # HIP_VISIBLE_DEVICES=0 -- Ignore iGPU of 7900x
-    # GPU_ENABLE_WGP_MODE=0 -- On RDNA2, compute units are grouped into "Workgroup Processors." Disabling this forces the compiler to schedule tasks at the individual Compute Unit (CU) level. For LLMs, this usually results in more granular, efficient math.
-    # HSA_OVERRIDE_GFX_VERSION=10.3.0 -- Tell the driver to treat 6800 XT like a professional Radeon Pro V620, which uses the same gfx1030 architecture.
-HIP_VISIBLE_DEVICES=0 GPU_ENABLE_WGP_MODE=0 HSA_OVERRIDE_GFX_VERSION=10.3.0 \
+echo "🚀 Starting Qwen 3.5 API Server on http://127.0.0.1:8001"
+AMD_VULKAN_ICD=RADV \
 llama-server \
     -m ./models/Qwen3.5-27B-Q4_K_M.gguf \
     --ctx-size 25000 \
-    --n-gpu-layers 26 \
+    --n-gpu-layers 50 \
     --ubatch-size 512 \
     --batch-size 512 \
-    --flash-attn off \
+    --flash-attn on \
+    --cache-type-k q8_0 \
+    --cache-type-v q8_0 \
     --threads 11 \
     --parallel 1 \
     --fit-target 1024 \
-    --mlock \
-    --no-mmap \
     --temp 0.6 \
     --top-k 20 \
     --frequency-penalty 1.0 \
@@ -50,7 +47,7 @@ done
 echo -e "\n🟢 llama server ready!"
 
 # --- OpenCode Config (Pointing to Localhost) ---
-export OPENCODE_CONFIG_CONTENT=$(cat ./opencode.json)
-opencode --model llama-local/qwen3.5-35b
+export OPENCODE_CONFIG_CONTENT=$(cat ./opencode-27b.json)
+opencode --model llama-local/qwen3.5-27b
 
 cleanup
