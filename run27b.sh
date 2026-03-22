@@ -28,7 +28,6 @@ llama-server \
     --cache-type-v q8_0 \
     --threads 11 \
     --parallel 1 \
-    --fit-target 1024 \
     --temp 0.6 \
     --top-k 20 \
     --frequency-penalty 1.0 \
