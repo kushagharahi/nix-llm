@@ -5,7 +5,7 @@ cleanup() {
     # Kill the trap to prevent double-execution
     trap - EXIT INT TERM
 
-    echo -e "\n\n🛑 OpenCode closed. Cleaning up GPU resources..."
+    echo -e "\n\n🛑 Pi closed. Cleaning up GPU resources..."
     # Kill the llama server specifically  
     [ -n "$LLAMA_PID" ] && kill $LLAMA_PID 2>/dev/null
     exit 0
@@ -45,8 +45,9 @@ until curl -s http://127.0.0.1:8001/health | grep -q 'ok'; do
 done
 echo -e "\n🟢 llama server ready!"
 
-# --- OpenCode Config (Pointing to Localhost) ---
-export OPENCODE_CONFIG_CONTENT=$(cat ./opencode-35b-3b.json)
-opencode --model llama-local/qwen3.5-35b-3b
+# --- Pi Config (Pointing to Localhost) ---
+mkdir -p ~/.pi/agent
+cp ./models-35b-3b.json ~/.pi/agent/models.json
+pi --model llama-local/qwen3.5-35b-3b
 
 cleanup

@@ -3,14 +3,12 @@
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
-    opencode.url = "github:anomalyco/opencode/v1.2.20";
     llama-cpp-repo.url = "path:/home/kusha/projects/llama.cpp";
   };
 
   outputs = {
     self,
     nixpkgs,
-    opencode,
     llama-cpp-repo,
   }: let
     system = "x86_64-linux";
@@ -65,11 +63,19 @@
     devShells.${system}.default = pkgs.mkShell {
       buildInputs = [
         llama-amd
-        opencode.packages.${system}.default
+        pkgs.nodejs
         pkgs.curl
       ];
 
-      shellHook = "source ./run.sh";
+      shellHook = ''
+        export NPM_CONFIG_PREFIX=~/.npm-global
+        export PATH="$NPM_CONFIG_PREFIX/bin:$PATH"
+        if ! command -v pi &> /dev/null; then
+          echo "📦 Installing pi coding agent..."
+          npm install -g @mariozechner/pi-coding-agent@0.61.1
+        fi
+        source ./run.sh
+      '';
     };
   };
 }
