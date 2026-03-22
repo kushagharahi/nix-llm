@@ -22,7 +22,6 @@ llama-server \
     -m ./models/Qwen3.5-27B-Q4_K_M.gguf \
     --ctx-size 25000 \
     --n-gpu-layers 50 \
-    --ubatch-size 512 \
     --batch-size 512 \
     --flash-attn 1 \
     --cache-type-k q8_0 \

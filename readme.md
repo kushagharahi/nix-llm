@@ -71,7 +71,6 @@ Both start a llama server on `http://127.0.0.1:8001` and run pi pointing to that
 | `-m ./models/Qwen3.5-35B-A3B-UD-Q4_K_XL.gguf`  | Model path                  | Q4_K_XL quantization fits in VRAM with room for context             |
 | `--ctx-size 25000`                | Context window size         | Sets context length for inference at :8001 server port.                             |
 | `--n-gpu-layers 16` (35B) / `50` (27B)| GPU layers                  | Offload layers to GPU for faster inference on RX 6800 XT with ROCm backend support   |
-| `--ubatch-size 512`               | Physical batch size         | Optimized for RDNA2 architecture, balances throughput and memory                                    |
 | `--batch-size 512`                | Logical batch size            | Handles concurrent requests without memory pressure                                                 |
 | `-m ./models/Qwen3.5-27B-Q4_K_M.gguf` (run27b.sh)   | Model path for 27B model    | Q4_K_M quantization of dense 27B model                            |
 | `--n-cpu-moe 20`                  | CPU MoE layers                | Offloads Mixture-of-Expert layers to CPU when GPU is full (35B only)                                           |
