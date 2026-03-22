@@ -12,7 +12,7 @@
                 "qwen3.5-35b-3b": {
                     "name": "Qwen 3.5 35B-3B",
                     "limit": {
-                        "context": 25000,
+                        "context": 65536,
                         "output": 4096
                     }
                 }
