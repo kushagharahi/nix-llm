@@ -74,7 +74,6 @@ Both start a llama server on `http://127.0.0.1:8001` and run pi pointing to that
 | `--batch-size 512`                | Logical batch size            | Handles concurrent requests without memory pressure                                                 |
 | `-m ./models/Qwen3.5-27B-Q4_K_M.gguf` (run27b.sh)   | Model path for 27B model    | Q4_K_M quantization of dense 27B model                            |
 | `--n-cpu-moe 20`                  | CPU MoE layers                | Offloads Mixture-of-Expert layers to CPU when GPU is full (35B only)                                           |
-| `--fit-target 1024`               | Memory fit target             | Optimizes layer placement for available VRAM                                                        |
 | `--flash-attn 1`                  | Flash attention toggle        | Enabled for improved performance on AMD GPUs                                         |
 | `--parallel 1`                    | Request parallelism           | Single slot prevents queue buildup and memory spikes under load                                     |
 | `--threads 11`                    | CPU threads                   | Uses all available CPU cores for inference                                                          |

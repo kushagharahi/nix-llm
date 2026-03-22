@@ -19,16 +19,14 @@ AMD_VULKAN_ICD=RADV \
 llama-server \
     -m ./models/Qwen3.5-35B-A3B-UD-Q4_K_XL.gguf \
     --ctx-size 65536 \
-    --n-gpu-layers 25 \
+    --n-gpu-layers 50 \
     --n-cpu-moe 20 \
-
     --batch-size 512 \
     --threads 11 \
     --flash-attn 1 \
     --cache-type-k q8_0 \
     --cache-type-v q8_0 \
     --parallel 1 \
-    --fit-target 1024 \
     --temp 0.6 \
     --top-k 20 \
     --frequency-penalty 1.0 \
