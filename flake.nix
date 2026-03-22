@@ -42,18 +42,22 @@
             "-DCMAKE_BUILD_TYPE=Release"
             "-DGGML_VULKAN=ON"
             "-DGGML_VULKAN_PERF_PROFILING=OFF"
-            "-DGGML_NATIVE=ON" # Optimizes for your specific CPU as well
+            "-DGGML_NATIVE=ON"
             # Wont work on official llama.cpp until https://github.com/ggml-org/llama.cpp/pull/20158 is merged
             "-DLLAMA_BUILD_WEBUI=OFF" # Don't bundle webui
           ];
 
-        # Ensure all necessary ROCm libraries are present
+        # Ensure all necessary Vulkan libraries are present
         buildInputs =
           oldAttrs.buildInputs
           ++ [
             pkgs.vulkan-headers # Provides Vulkan_INCLUDE_DIR
             pkgs.vulkan-loader # Provides Vulkan_LIBRARY
           ];
+
+        preConfigure = ''
+          echo "0000000" > COMMIT
+        '';
 
         appendRunpaths = ["${placeholder "out"}/lib"];
       });
@@ -65,7 +69,7 @@
         pkgs.curl
       ];
 
-      shellHook = "source ./run27b.sh";
+      shellHook = "source ./run.sh";
     };
   };
 }

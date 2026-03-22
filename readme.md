@@ -24,13 +24,17 @@ nix shell nixpkgs#python313Packages.huggingface-hub -c huggingface-cli download 
   --local-dir ./models
 ```
 
-### QWEN 27B
+### QWEN 3.5 27B (Dense)
 
-Dense, slow, but smart
-// TODO: Also explain 4 bit quant
-// TODO: HF link
-
+Dense model, slower inference but smart  
+Model: https://huggingface.co/unsloth/Qwen3.5-27B-GGUF
+  
+```nix shell nixpkgs#python313Packages.huggingface-hub -c huggingface-cli download \  
+   unsloth/Qwen3.5-27B-GGUF \
+   Qwen3.5-27B-Q4_K_M.gguf  \
+   --local-dir ./models
 ```
+
 nix shell nixpkgs#python313Packages.huggingface-hub -c huggingface-cli download \  
   unsloth/Qwen3.5-27B-GGUF \
   Qwen3.5-27B-Q4_K_M.gguf  \
@@ -40,13 +44,19 @@ nix shell nixpkgs#python313Packages.huggingface-hub -c huggingface-cli download 
 
 ### Run the LLM 
 
-```
-nix develop
+For Qwen 3.5 35B:
+```bash
+./run.sh
 ```
 
-This starts a llama server on `:8001` and runs opencode pointing to that llama server
+For Qwen 27B:
+```bash
+./run27b.sh
+```
 
-### Environment Variables
+Both start a llama server on `http://127.0.0.1:8001` and run opencode pointing to that llama server
+
+### Environment Variables (AMD GPU)
 
 | Flag | Function | Benefit for Setup |
 | :--- | :---:| :---:|
@@ -59,13 +69,14 @@ This starts a llama server on `:8001` and runs opencode pointing to that llama s
 | Flag                              | Function                    | Benefit for Setup                                                                                   |
 |:----------------------------------|:----------------------------|:----------------------------------------------------------------------------------------------------|
 | `-m ./models/Qwen3.5-35B-A3B-UD-Q4_K_XL.gguf`  | Model path                  | Q4_K_XL quantization fits in VRAM with room for context             |
-| `--ctx-size 32768`                | Context window size         | Sets context length for inference at :8001 server port.                             |
-| `--n-gpu-layers 16`               | GPU layers                  | Offload 16 layers to GPU for faster inference on RX 6800 XT with ROCm backend support   |
+| `--ctx-size 25000`                | Context window size         | Sets context length for inference at :8001 server port.                             |
+| `--n-gpu-layers 16` (35B) / `50` (27B)| GPU layers                  | Offload layers to GPU for faster inference on RX 6800 XT with ROCm backend support   |
 | `--ubatch-size 512`               | Physical batch size         | Optimized for RDNA2 architecture, balances throughput and memory                                    |
 | `--batch-size 512`                | Logical batch size            | Handles concurrent requests without memory pressure                                                 |
-| `--n-cpu-moe 20`                  | CPU MoE layers                | Offloads Mixture-of-Expert layers to CPU when GPU is full                                           |
+| `-m ./models/Qwen3.5-27B-Q4_K_M.gguf` (run27b.sh)   | Model path for 27B model    | Q4_K_M quantization of dense 27B model                            |
+| `--n-cpu-moe 20`                  | CPU MoE layers                | Offloads Mixture-of-Expert layers to CPU when GPU is full (35B only)                                           |
 | `--fit-target 1024`               | Memory fit target             | Optimizes layer placement for available VRAM                                                        |
-| `--flash-attn off`                | Flash attention toggle        | Disabled due to ROCm driver limitations on AMD GPUs (RDNA2)                                         |
+| `--flash-attn 1`                  | Flash attention toggle        | Enabled for improved performance on AMD GPUs                                         |
 | `--parallel 1`                    | Request parallelism           | Single slot prevents queue buildup and memory spikes under load                                     |
 | `--threads 11`                    | CPU threads                   | Uses all available CPU cores for inference                                                          |
 | `--mlock`                         | Memory locking                | Pins model to physical RAM to prevent SSD swap/wear                                                 |

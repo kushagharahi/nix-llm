@@ -24,7 +24,7 @@ llama-server \
     --n-gpu-layers 50 \
     --ubatch-size 512 \
     --batch-size 512 \
-    --flash-attn on \
+    --flash-attn 1 \
     --cache-type-k q8_0 \
     --cache-type-v q8_0 \
     --threads 11 \
