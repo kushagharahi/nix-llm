@@ -21,7 +21,7 @@ llama-server \
     --ctx-size 65536 \
     --n-gpu-layers 25 \
     --n-cpu-moe 20 \
-    --ubatch-size 512 \
+
     --batch-size 512 \
     --threads 11 \
     --flash-attn 1 \
