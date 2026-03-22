@@ -68,22 +68,35 @@ Both start a llama server on `http://127.0.0.1:8001` and run pi pointing to that
 
 | Flag                              | Function                    | Benefit for Setup                                                                                   |
 |:----------------------------------|:----------------------------|:----------------------------------------------------------------------------------------------------|
-| `-m ./models/Qwen3.5-35B-A3B-UD-Q4_K_XL.gguf`  | Model path                  | Q4_K_XL quantization fits in VRAM with room for context             |
-| `--ctx-size 25000`                | Context window size         | Sets context length for inference at :8001 server port.                             |
-| `--n-gpu-layers 16` (35B) / `50` (27B)| GPU layers                  | Offload layers to GPU for faster inference on RX 6800 XT with ROCm backend support   |
+
+### Parameters for Qwen3.5 35B (run.sh)
+
+| Flag                              | Function                    | Benefit for Setup                                                                                   |
+|:----------------------------------|:----------------------------|:----------------------------------------------------------------------------------------------------|
+| `-m ./models/Qwen3.5-35B-A3B-UD-Q4_K_XL.gguf`  | Model path                  | Q4_K_XL quantization fits in VRAM with room for context                                             |
+| `--ctx-size 65536`                | Context window size         | Maximum context length for long-form generation                                                   |
+| `--n-gpu-layers 55`               | GPU layers                  | Offload more MoE experts to Vulkan backend on RX 6800 XT                                          |
+
+### Parameters for Qwen35 27B (run27b.sh)
+
+| Flag                              | Function                    | Benefit for Setup                                                                                   |
+|:----------------------------------|:----------------------------|:----------------------------------------------------------------------------------------------------|
+| `-m ./models/Qwen3.5-27B-Q4_K_M.gguf`   | Model path                  | Q4_K_M quantization of dense 27B model                                                              |
+| `--ctx-size 25000`                | Context window size         | Sets context length for inference at :8001 server port.                                           |
+| `--n-gpu-layers 50`               | GPU layers                  | Offload all dense layers to Vulkan backend on RX 6800 XT                                          |
+
+### Shared Parameters (Both Scripts)
+
+| Flag                              | Function                    | Benefit for Setup                                                                                   |
+|:----------------------------------|:----------------------------|:----------------------------------------------------------------------------------------------------|
 | `--batch-size 512`                | Logical batch size            | Handles concurrent requests without memory pressure                                                 |
-| `-m ./models/Qwen3.5-27B-Q4_K_M.gguf` (run27b.sh)   | Model path for 27B model    | Q4_K_M quantization of dense 27B model                            |
-| `--n-cpu-moe 20`                  | CPU MoE layers                | Offloads Mixture-of-Expert layers to CPU when GPU is full (35B only)                                           |
-| `--flash-attn 1`                  | Flash attention toggle        | Enabled for improved performance on AMD GPUs                                         |
-| `--parallel 1`                    | Request parallelism           | Single slot prevents queue buildup and memory spikes under load                                     |
-| `--threads 11`                    | CPU threads                   | Uses all available CPU cores for inference                                                          |
-| `--mlock`                         | Memory locking                | Pins model to physical RAM to prevent SSD swap/wear                                                 |
-| `--no-mmap`                       | No memory mapping             | Forces full memory load instead of mmap, more stable on AMD GPUs                                    |
-| `--temp 0.6`                      | Sampling temperature          | Balanced creativity for code generation and technical writing                                       |
-| `--top-p 0.95`                    | Nucleus sampling threshold    | Focuses on high-probability tokens while maintaining diversity                                      |
-| `--top-k 20`                      | Top-k sampling limit          | Restricts token candidates to most likely options for coherence                                     |
-| `--min-p 0.00`                    | Minimum probability threshold | Allows full token distribution without floor constraint                                             |
-| `--presence_penalty 0.0`          | Presence penalty score        | No repetition bias applied, allows diverse responses                                                |
-| `--frequency_penalty 1.0`         | Frequency penalty score       | Strongly discourages repeated tokens for variety                                                    |
-| `--repeat_penalty 1.1`            | Repeat penalty multiplier     | Moderate reinforcement against token repetition                                                     |
-| `--no-webui`                      | Web UI toggle                 | CLI-only mode reduces resource overhead when using pi interface                                     |
+| `--cache-type-k q8_0`             | KV cache type K               | Quantized key/value cache for reduced VRAM usage                                                    |
+| `--cache-type-v q8_0`             | KV cache type V               | Quantized value/cache for reduced VRAM usage                                                        |
+| `--flash-attn 1`                  | Flash attention toggle        | Enabled for improved performance on AMD GPUs with Vulkan                                          |
+| `--frequency-penalty 1.0`         | Frequency penalty score       | Strongly discourages repeated tokens for variety                                                    |
+| `--host 127.0.0.1`                | Server host                   | Localhost only prevents external access                                                             |
+| `--no-webui`                      | Web UI toggle                 | CLI-only mode reduces resource overhead when using pi interface                                   |
+| `--parallel 1`                    | Request parallelism           | Single slot prevents queue buildup and memory spikes under load                                   |
+| `--port 8001`                     | Server port                   | llama server listening on standard API port                                                       |
+| `--repeat-penalty 1.1`            | Repeat penalty multiplier     | Moderate reinforcement against token repetition                                                   |
+| `--threads 11`                    | CPU threads                   | Uses all available CPU cores for inference                                                        |
