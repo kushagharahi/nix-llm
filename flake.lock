@@ -24,8 +24,8 @@
         "nixpkgs": "nixpkgs"
       },
       "locked": {
-        "lastModified": 1774147614,
-        "narHash": "sha256-yk8R56SsE5kq/L4Cy2+0olaqQQvVtXyaE2oFx323aY4=",
+        "lastModified": 1774230716,
+        "narHash": "sha256-rQjkSd60WNhoYpaJ0NIuZG7XC1SEjmtj6SQ8lRVzMvg=",
         "path": "/home/kusha/projects/llama.cpp",
         "type": "path"
       },
