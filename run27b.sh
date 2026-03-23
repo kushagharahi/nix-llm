@@ -39,10 +39,21 @@ llama-server \
 LLAMA_PID=$!
 
 echo -n "⏳ Waiting for llama server (see llama.log)"
+
 until curl -s http://127.0.0.1:8001/health | grep -q 'ok'; do
-    echo -n "."
-    sleep 1
+    
+    # Exit loop if process died, print error and exit script  
+    if ! kill -0 "$LLAMA_PID" 2>/dev/null; then
+        echo ""
+        tail "$SCRIPT_DIR/llama.log" >&2 
+        exit 1
+    fi
+    
+    sleep 3
+
 done
+
+echo "🟢 llama server ready!"
 echo -e "\n🟢 llama server ready!"
 
 # --- Pi Config (Pointing to Localhost) ---
