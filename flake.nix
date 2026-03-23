@@ -62,7 +62,7 @@
         export PATH="$NPM_CONFIG_PREFIX/bin:$PATH"
         if ! command -v pi &> /dev/null; then
           echo "📦 Installing pi coding agent..."
-          npm install -g @mariozechner/pi-coding-agent@0.61.1
+          npm install -g @mariozechner/pi-coding-agent@0.62.0
         fi
         source ./run27b.sh
       '';
