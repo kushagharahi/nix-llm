@@ -74,7 +74,7 @@
           echo "📦 Installing pi coding agent..."
           npm install -g @mariozechner/pi-coding-agent@0.61.1
         fi
-        source ./run.sh
+        source ./run27b.sh
       '';
     };
   };

@@ -22,10 +22,10 @@ llama-server \
     --n-gpu-layers 65 \
     --n-cpu-moe 20 \
     --batch-size 512 \
-    --threads 11 \
-    --flash-attn 1 \
+    --flash-attn on \
     --cache-type-k q8_0 \
     --cache-type-v q8_0 \
+    --threads 11 \
     --parallel 1 \
     --temp 0.6 \
     --top-k 20 \

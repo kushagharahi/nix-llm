@@ -17,13 +17,14 @@ cleanup() {
 trap cleanup INT EXIT TERM
 
 echo "🚀 Starting Qwen 3.5 API Server on http://127.0.0.1:8001"
+
 AMD_VULKAN_ICD=RADV \
 llama-server \
     -m ./models/Qwen3.5-27B-Q4_K_M.gguf \
     --ctx-size 25000 \
     --n-gpu-layers 50 \
     --batch-size 512 \
-    --flash-attn 1 \
+    --flash-attn on \
     --cache-type-k q8_0 \
     --cache-type-v q8_0 \
     --threads 11 \
