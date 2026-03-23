@@ -9,49 +9,36 @@ Runs QWEN 3.5 35B and [pi.dev](https://pi.dev)
 
 First, download the model to `/models`:
 
-### QWEN 3.5 35B 3B active parameter Unsloth Dynamic Q4 K-Quant Extra Large
+### QWEN 3.5 35B 3B active parameter
 
 Model: https://huggingface.co/unsloth/Qwen3.5-35B-A3B-GGUF 
 
 Very fast, but only considers 3B params at a time (A3B = active params 3B) aka (Mixture of Experts) MoE. THe model tries to get the expert with the most relevant 3B params
 
-//todo explain 4 bit quantization
-
-```
+```bash
 nix shell nixpkgs#python313Packages.huggingface-hub -c huggingface-cli download \
   unsloth/Qwen3.5-35B-A3B-GGUF \
-  Qwen3.5-35B-A3B-UD-Q4_K_XL.gguf \
+  Qwen3.5-35B-A3B-Q8_0.gguf \
   --local-dir ./models
 ```
 
 ### QWEN 3.5 27B (Dense)
 
-Dense model, slower inference but smart  
+Dense model - uses all parameters simultaneously instead of MoE routing, providing consistent reasoning depth but slower inference due to full parameter computation on each token generation.  
 Model: https://huggingface.co/unsloth/Qwen3.5-27B-GGUF
   
-```nix shell nixpkgs#python313Packages.huggingface-hub -c huggingface-cli download \  
-   unsloth/Qwen3.5-27B-GGUF \
-   Qwen3.5-27B-Q4_K_M.gguf  \
-   --local-dir ./models
-```
-
-nix shell nixpkgs#python313Packages.huggingface-hub -c huggingface-cli download \  
+```bash
+nix shell nixpkgs#python313Packages.huggingface-hub -c huggingface-cli download \
   unsloth/Qwen3.5-27B-GGUF \
-  Qwen3.5-27B-Q4_K_M.gguf  \
+  Qwen3.5-27B-Q4_K_M.gguf \
   --local-dir ./models
 ```
 
 
 ### Run the LLM 
 
-For Qwen 3.5 35B:
 ```bash
-./run.sh
-```
-
-For Qwen 27B:
-```bash
-./run27b.sh
+nix-develop
 ```
 
 Both start a llama server on `http://127.0.0.1:8001` and run pi pointing to that llama server

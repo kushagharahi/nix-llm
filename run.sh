@@ -17,11 +17,11 @@ echo "🚀 Starting Qwen 3.5 API Server on http://127.0.0.1:8001"
 
 AMD_VULKAN_ICD=RADV \
 llama-server \
-    -m ./models/Qwen3.5-35B-A3B-UD-Q4_K_XL.gguf \
-    --ctx-size 65536 \
-    --n-gpu-layers 65 \
-    --n-cpu-moe 20 \
-    --batch-size 512 \
+    -m ./models/Qwen3.5-35B-A3B-Q8_0.gguf \
+    --ctx-size 262144 \
+    --n-gpu-layers 99 \
+    --n-cpu-moe 40 \
+    --ubatch-size 2048 \
     --flash-attn on \
     --cache-type-k q8_0 \
     --cache-type-v q8_0 \
@@ -36,10 +36,19 @@ llama-server \
     --port 8001 &> llama.log &
 LLAMA_PID=$!
 
-echo -n "⏳ Waiting for llama server (see llama.log)"
+echo "⏳ Waiting for llama server (see llama.log)"
+
 until curl -s http://127.0.0.1:8001/health | grep -q 'ok'; do
-    echo -n "."
-    sleep 1
+    
+    # Exit loop if process died, print error and exit script  
+    if ! kill -0 "$LLAMA_PID" 2>/dev/null; then
+        echo ""
+        tail llama.log >&2 
+        exit 1
+    fi
+    
+    sleep 3
+
 done
 echo -e "\n🟢 llama server ready!"
 
