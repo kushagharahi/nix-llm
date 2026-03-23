@@ -1,5 +1,5 @@
 {
-  description = "AMD Optimized Qwen 3.5 35B";
+  description = "6800 xt Optimized llama.cpp";
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
@@ -18,31 +18,25 @@
     };
 
     llama-amd =
-      (pkgs.llama-cpp.override {
-        rocmSupport = false;
-        vulkanSupport = true;
+      (llama-cpp-repo.packages.${system}.default.override {
+        useVulkan = true;
+        useRocm = false;
+        useCuda = false;
+        # Wont work on official llama.cpp until https://github.com/ggml-org/llama.cpp/pull/20158 is merged
+        useWebUi = false;
       }).overrideAttrs (oldAttrs: {
         src = llama-cpp-repo;
 
         # version must be an integer string for C++ LLAMA_BUILD_NUMBER
         version = "0";
 
-        # Disable WebUI build and npm dependencies to fix local source hash mismatch
-        npmDeps = null;
-        nativeBuildInputs = pkgs.lib.filter (
-          p:
-            !(p ? pname && (p.pname == "nodejs" || p.pname == "npm-config-hook"))
-        ) (oldAttrs.nativeBuildInputs or [pkgs.shaderc]);
-
         cmakeFlags =
           oldAttrs.cmakeFlags
           ++ [
             "-DCMAKE_BUILD_TYPE=Release"
-            "-DGGML_VULKAN=ON"
             "-DGGML_VULKAN_PERF_PROFILING=OFF"
+            # Native CPU optimizations
             "-DGGML_NATIVE=ON"
-            # Wont work on official llama.cpp until https://github.com/ggml-org/llama.cpp/pull/20158 is merged
-            "-DLLAMA_BUILD_WEBUI=OFF" # Don't bundle webui
           ];
 
         # Ensure all necessary Vulkan libraries are present
@@ -52,10 +46,6 @@
             pkgs.vulkan-headers # Provides Vulkan_INCLUDE_DIR
             pkgs.vulkan-loader # Provides Vulkan_LIBRARY
           ];
-
-        preConfigure = ''
-          echo "0000000" > COMMIT
-        '';
 
         appendRunpaths = ["${placeholder "out"}/lib"];
       });
