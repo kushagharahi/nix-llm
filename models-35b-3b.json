@@ -14,7 +14,12 @@
                     "name": "Qwen 3.5 35B-3B",
                     "contextWindow": 65536,
                     "maxTokens": 4096,
-                    "cost": { "input": 0, "output": 0, "cacheRead": 0, "cacheWrite": 0 }
+                    "cost": {
+                        "input": 0,
+                        "output": 0,
+                        "cacheRead": 0,
+                        "cacheWrite": 0
+                    }
                 }
             ]
         }

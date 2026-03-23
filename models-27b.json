@@ -12,9 +12,14 @@
                 {
                     "id": "qwen3.5-27b",
                     "name": "Qwen 3.5 27B",
-                    "contextWindow": 25000,
+                    "contextWindow": 65536,
                     "maxTokens": 4096,
-                    "cost": { "input": 0, "output": 0, "cacheRead": 0, "cacheWrite": 0 }
+                    "cost": {
+                        "input": 0,
+                        "output": 0,
+                        "cacheRead": 0,
+                        "cacheWrite": 0
+                    }
                 }
             ]
         }
