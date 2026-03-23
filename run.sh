@@ -4,14 +4,16 @@
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 # Graceful shutdown 
-cleanup() {   
-    trap - EXIT INT TERM  
-    echo -e "\n\n🛑 Pi closed. Cleaning up GPU resources..."    
-    [ -n "$LLAMA_PID" ] && kill $LLAMA_PID 2>/dev/null
-    exit 0 
-} 
+cleanup() {
+    # Kill the trap to prevent double-execution
+    trap - EXIT INT TERM
 
-trap cleanup INT EXIT TERM
+    echo -e "\n\n🛑 Pi closed. Cleaning up GPU resources..."
+    # Kill the llama server specifically  
+    [ -n "$LLAMA_PID" ] && kill $LLAMA_PID 2>/dev/null
+    exit 0
+}
+# Trap exit signals (Ctrl+C, script end, etc.)
 
 # Usage check
 if [[ $# -ne 1 ]]; then
@@ -77,18 +79,18 @@ esac
 
 LLAMA_PID=$!
 
-echo -n "⏳ Waiting for llama server (see llama.log)" 
+echo "⏳ Waiting for llama server (see llama.log)" 
 
-until curl -s http://127.0.0.1/8001/health | grep -q 'ok'; do
-    
+
+until curl -s http://127.0.0.1:8001/health | grep -q 'ok'; do
+    # Exit loop if process died, print error and exit script  
     if ! kill -0 "$LLAMA_PID" 2>/dev/null; then
         echo ""
-        tail "$SCRIPT_DIR/llama.log" >&2 
+        tail "llama.log" >&2 
         exit 1
     fi
     
     sleep 3
-
 done
 
 echo "🟢 llama server ready!"
