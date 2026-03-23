@@ -21,7 +21,7 @@ echo "🚀 Starting Qwen 3.5 API Server on http://127.0.0.1:8001"
 AMD_VULKAN_ICD=RADV \
 llama-server \
     -m ./models/Qwen3.5-27B-Q4_K_M.gguf \
-    --ctx-size 25000 \
+    --ctx-size 65536 \
     --n-gpu-layers 50 \
     --batch-size 512 \
     --flash-attn on \
