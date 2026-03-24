@@ -34,19 +34,11 @@
           oldAttrs.cmakeFlags
           ++ [
             "-DCMAKE_BUILD_TYPE=Release"
-            "-DGGML_VULKAN_PERF_PROFILING=OFF"
+            # Link Time Optimization (5-15% speedup, slower build)
+            "-DGGML_LTO=ON"
             # Native CPU optimizations
             "-DGGML_NATIVE=ON"
           ];
-
-        # Ensure all necessary Vulkan libraries are present
-        buildInputs =
-          oldAttrs.buildInputs
-          ++ [
-            pkgs.vulkan-headers # Provides Vulkan_INCLUDE_DIR
-            pkgs.vulkan-loader # Provides Vulkan_LIBRARY
-          ];
-
         appendRunpaths = ["${placeholder "out"}/lib"];
       });
 
@@ -82,6 +74,7 @@
           # We use -g but because of the PREFIX above, it stays in this folder
           npm install -g @mariozechner/pi-coding-agent@${piVersion}
         fi
+
         source ./run.sh 27b
       '';
     };
