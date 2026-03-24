@@ -49,6 +49,8 @@
 
         appendRunpaths = ["${placeholder "out"}/lib"];
       });
+
+    piVersion = "0.62.0";
   in {
     devShells.${system}.default = pkgs.mkShell {
       buildInputs = [
@@ -58,11 +60,27 @@
       ];
 
       shellHook = ''
-        export NPM_CONFIG_PREFIX=~/.npm-global
+        # Define a local path for NPM to install things into
+        export PROJECT_ROOT=$(pwd)
+        # The version is baked into the folder name.
+        # Changing the variable automatically 'installs' a new one.
+        export NPM_CONFIG_PREFIX="$PROJECT_ROOT/.nix-node/v${piVersion}"
+
+        # Add that local bin to your PATH
         export PATH="$NPM_CONFIG_PREFIX/bin:$PATH"
-        if ! command -v pi &> /dev/null; then
-          echo "📦 Installing pi coding agent..."
-          npm install -g @mariozechner/pi-coding-agent@0.62.0
+
+        # Handle the C-Libraries for 'canvas'
+        export LD_LIBRARY_PATH="${pkgs.lib.makeLibraryPath [
+          pkgs.pixman
+          pkgs.cairo
+          pkgs.pango
+        ]}:$LD_LIBRARY_PATH"
+
+        # Check if the SPECIFIC version is installed locally
+        if [ ! -f "$NPM_CONFIG_PREFIX/bin/pi" ]; then
+          echo "📦 Installing pi-coding-agent @${piVersion} locally to .nix-node..."
+          # We use -g but because of the PREFIX above, it stays in this folder
+          npm install -g @mariozechner/pi-coding-agent@${piVersion}
         fi
         source ./run.sh 27b
       '';
