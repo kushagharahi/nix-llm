@@ -17,7 +17,7 @@
       config.allowUnfree = true;
     };
 
-    llama-amd =
+    llama-vulkan =
       (llama-cpp-repo.packages.${system}.default.override {
         useVulkan = true;
         useRocm = false;
@@ -45,7 +45,7 @@
   in {
     devShells.${system}.default = pkgs.mkShell {
       buildInputs = [
-        llama-amd
+        llama-vulkan
         pkgs.nodejs
         pkgs.curl
       ];
@@ -74,7 +74,7 @@
           npm install -g @mariozechner/pi-coding-agent@${piVersion}
         fi
 
-        source ./run.sh 27b
+        source ./bench.sh
       '';
     };
   };
