@@ -3,7 +3,7 @@
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
-    llama-cpp-repo.url = "path:/home/kusha/projects/llama.cpp";
+    llama-cpp-repo.url = "github:ggml-org/llama.cpp/b8589";
   };
 
   outputs = {
@@ -22,7 +22,6 @@
         useVulkan = true;
         useRocm = false;
         useCuda = false;
-        # Wont work on official llama.cpp until https://github.com/ggml-org/llama.cpp/pull/20158 is merged
         useWebUi = false;
       }).overrideAttrs (oldAttrs: {
         src = llama-cpp-repo;
