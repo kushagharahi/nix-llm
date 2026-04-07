@@ -21,30 +21,32 @@
     "llama-cpp-repo": {
       "inputs": {
         "flake-parts": "flake-parts",
-        "nixpkgs": "nixpkgs"
+        "nixpkgs": [
+          "nixpkgs"
+        ]
       },
       "locked": {
-        "lastModified": 1774898356,
-        "narHash": "sha256-092Le66uWCb1e4ggKvJu8HJXXSMlGx4mgasIpsN4SbE=",
+        "lastModified": 1775506126,
+        "narHash": "sha256-D5gOSsaZWEK+guKd89anawvBs3FOqfRBFcfPFleZiIw=",
         "owner": "ggml-org",
         "repo": "llama.cpp",
-        "rev": "08f21453aec846867b39878500d725a05bd32683",
+        "rev": "d0a6dfeb28a09831d904fc4d910ddb740da82834",
         "type": "github"
       },
       "original": {
         "owner": "ggml-org",
-        "ref": "b8589",
+        "ref": "b8683",
         "repo": "llama.cpp",
         "type": "github"
       }
     },
     "nixpkgs": {
       "locked": {
-        "lastModified": 1732014248,
-        "narHash": "sha256-y/MEyuJ5oBWrWAic/14LaIr/u5E0wRVzyYsouYY3W6w=",
+        "lastModified": 1774709303,
+        "narHash": "sha256-D3Q07BbIA2KnTcSXIqqu9P586uWxN74zNoCH3h2ESHg=",
         "owner": "NixOS",
         "repo": "nixpkgs",
-        "rev": "23e89b7da85c3640bbc2173fe04f4bd114342367",
+        "rev": "8110df5ad7abf5d4c0f6fb0f8f978390e77f9685",
         "type": "github"
       },
       "original": {
@@ -66,26 +68,10 @@
         "url": "https://github.com/NixOS/nixpkgs/archive/cc2f28000298e1269cea6612cd06ec9979dd5d7f.tar.gz"
       }
     },
-    "nixpkgs_2": {
-      "locked": {
-        "lastModified": 1774386573,
-        "narHash": "sha256-4hAV26quOxdC6iyG7kYaZcM3VOskcPUrdCQd/nx8obc=",
-        "owner": "NixOS",
-        "repo": "nixpkgs",
-        "rev": "46db2e09e1d3f113a13c0d7b81e2f221c63b8ce9",
-        "type": "github"
-      },
-      "original": {
-        "owner": "NixOS",
-        "ref": "nixos-unstable",
-        "repo": "nixpkgs",
-        "type": "github"
-      }
-    },
     "root": {
       "inputs": {
         "llama-cpp-repo": "llama-cpp-repo",
-        "nixpkgs": "nixpkgs_2"
+        "nixpkgs": "nixpkgs"
       }
     }
   },
