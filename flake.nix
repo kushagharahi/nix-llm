@@ -90,7 +90,7 @@
         appendRunpaths = ["${placeholder "out"}/lib"];
       });
 
-    piVersion = "0.62.0";
+    piVersion = "0.65.2";
   in {
     devShells.${system}.default = pkgs.mkShell {
       buildInputs = [
@@ -123,7 +123,7 @@
           npm install -g @mariozechner/pi-coding-agent@${piVersion}
         fi
 
-        source ./run-amd.sh 35b
+        source ./run-amd.sh 26b
       '';
     };
   };
