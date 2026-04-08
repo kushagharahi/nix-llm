@@ -35,6 +35,7 @@ case "$MODEL_ARG" in
         MODEL="./models/gemma-4-26B-A4B-it-UD-Q5_K_M.gguf"
         LLAMA_ARGS=(
             --ctx-size 262144 \
+            --mlock \
             --fit-target 512 \
             --flash-attn on \
             --cache-type-k q5_1 \
@@ -55,6 +56,7 @@ case "$MODEL_ARG" in
         MODEL="./models/Qwen3.5-35B-A3B-Q8_0.gguf"
         LLAMA_ARGS=(
             --ctx-size 262144 \
+            --mlock \
             --fit-target 512 \
             --flash-attn on \
             --cache-type-k q8_0 \
@@ -75,6 +77,7 @@ case "$MODEL_ARG" in
         MODEL="./models/Qwen3.5-27B-Q4_K_M.gguf"
         LLAMA_ARGS=(
             --ctx-size 65536 \
+            --mlock \
             --fit-target 512 \
             --flash-attn on \
             --cache-type-k q8_0 \
