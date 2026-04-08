@@ -1,0 +1,27 @@
+{
+    "providers": {
+        "llama-local": {
+            "baseUrl": "http://127.0.0.1:8001/v1",
+            "api": "openai-completions",
+            "apiKey": "local-only",
+            "compat": {
+                "supportsDeveloperRole": false,
+                "supportsReasoningEffort": false
+            },
+            "models": [
+                {
+                    "id": "gemma4-26b-4b",
+                    "name": "Gemma 4 26b A4b",
+                    "contextWindow": 262144,
+                    "maxTokens": 4096,
+                    "cost": {
+                        "input": 0,
+                        "output": 0,
+                        "cacheRead": 0,
+                        "cacheWrite": 0
+                    }
+                }
+            ]
+        }
+    }
+}
