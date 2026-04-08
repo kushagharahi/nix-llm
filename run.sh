@@ -22,6 +22,30 @@ if [[ $# -ne 1 ]]; then
 fi
 
 case "$1" in
+    26b)
+        echo "🚀 Starting Qwen 3.5 API Server on http://127.0.0.1:8001 (35B model)"
+
+        AMD_VULKAN_ICD=RADV \
+        llama-server \
+            -m ./models/gemma-4-26B-A4B-it-UD-Q5_K_M.gguf \
+            --ctx-size 262144 \
+            --fit-target 512 \
+            --flash-attn on \
+            --cache-type-k q5_1 \
+            --cache-type-v q5_1 \
+            --threads 11 \
+            --parallel 1 \
+            --temp 1.0 \
+            --top-k 64 \
+            --top-p 0.95 \
+            --frequency-penalty 1.0 \
+            --repeat-penalty 1.1 \
+            --no-webui \
+            --host 127.0.0.1 \
+            --port 8001 &> llama.log &
+
+        ;;
+
     35b)
         echo "🚀 Starting Qwen 3.5 API Server on http://127.0.0.1:8001 (35B model)"
 
@@ -99,6 +123,10 @@ echo "🟢 llama server ready!"
 mkdir -p ~/.pi/agent
 
 case "$1" in
+    26b)
+        cp ./models-26b-4b.json ~/.pi/agent/models.json
+        pi --model llama-local/gemma4-26b-4b
+        ;;
     35b)
         cp ./models-35b-3b.json ~/.pi/agent/models.json
         pi --model llama-local/qwen3.5-35b-3b

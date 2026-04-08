@@ -4,7 +4,7 @@
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
     llama-cpp-repo = {
-      url = "github:ggml-org/llama.cpp/b8683";
+      url = "github:ggml-org/llama.cpp/b8702";
       # Force llama.cpp's flake to use OUR nixpkgs version
       inputs.nixpkgs.follows = "nixpkgs";
     };
@@ -21,29 +21,29 @@
       config.allowUnfree = true;
     };
 
-    # llama-vulkan =
-    #   (llama-cpp-repo.packages.${system}.default.override {
-    #     useVulkan = true;
-    #     useRocm = false;
-    #     useCuda = false;
-    #     useWebUi = false;
-    #   }).overrideAttrs (oldAttrs: {
-    #     src = llama-cpp-repo;
+    llama-vulkan =
+      (llama-cpp-repo.packages.${system}.default.override {
+        useVulkan = true;
+        useRocm = false;
+        useCuda = false;
+        useWebUi = false;
+      }).overrideAttrs (oldAttrs: {
+        src = llama-cpp-repo;
 
-    #     # version must be an integer string for C++ LLAMA_BUILD_NUMBER
-    #     version = "0";
+        # version must be an integer string for C++ LLAMA_BUILD_NUMBER
+        version = "0";
 
-    #     cmakeFlags =
-    #       oldAttrs.cmakeFlags
-    #       ++ [
-    #         "-DCMAKE_BUILD_TYPE=Release"
-    #         # Link Time Optimization (5-15% speedup, slower build)
-    #         "-DGGML_LTO=ON"
-    #         # Native CPU optimizations
-    #         "-DGGML_NATIVE=ON"
-    #       ];
-    #     appendRunpaths = ["${placeholder "out"}/lib"];
-    #   });
+        cmakeFlags =
+          oldAttrs.cmakeFlags
+          ++ [
+            "-DCMAKE_BUILD_TYPE=Release"
+            # Link Time Optimization (5-15% speedup, slower build)
+            "-DGGML_LTO=ON"
+            # Native CPU optimizations
+            "-DGGML_NATIVE=ON"
+          ];
+        appendRunpaths = ["${placeholder "out"}/lib"];
+      });
 
     llama-amd =
       (llama-cpp-repo.packages.${system}.default.override {
@@ -94,7 +94,8 @@
   in {
     devShells.${system}.default = pkgs.mkShell {
       buildInputs = [
-        llama-amd
+        #llama-amd
+        llama-vulkan
         pkgs.nodejs
         pkgs.curl
       ];
@@ -123,7 +124,7 @@
           npm install -g @mariozechner/pi-coding-agent@${piVersion}
         fi
 
-        source ./run-amd.sh 26b
+        source ./run.sh 26b
       '';
     };
   };
