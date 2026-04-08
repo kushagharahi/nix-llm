@@ -13,21 +13,25 @@ cleanup() {
     [ -n "$LLAMA_PID" ] && kill $LLAMA_PID 2>/dev/null
     exit 0
 }
-# Trap exit signals (Ctrl+C, script end, etc.)
 
 # Usage check
-if [[ $# -ne 1 ]]; then
-    echo "Usage: $0 <35b|27b>" >&2
+if [[ $# -lt 1 ]]; then
+    echo "Usage: $0 <26b|35b|27b> [--amd]" >&2
     exit 1
 fi
 
-case "$1" in
-    26b)
-        echo "🚀 Starting Qwen 3.5 API Server on http://127.0.0.1:8001 (35B model)"
+MODEL_ARG=$1
+USE_AMD=false
 
-        AMD_VULKAN_ICD=RADV \
-        llama-server \
-            -m ./models/gemma-4-26B-A4B-it-UD-Q5_K_M.gguf \
+if [[ "$2" == "--amd" ]]; then
+    USE_AMD=true
+fi
+
+# Configuration mapping: model -> {model_path, llama_args, pi_model, pi_json, desc}
+case "$MODEL_ARG" in
+    26b)
+        MODEL="./models/gemma-4-26B-A4B-it-UD-Q5_K_M.gguf"
+        LLAMA_ARGS=(
             --ctx-size 262144 \
             --fit-target 512 \
             --flash-attn on \
@@ -39,19 +43,15 @@ case "$1" in
             --top-k 64 \
             --top-p 0.95 \
             --frequency-penalty 1.0 \
-            --repeat-penalty 1.1 \
-            --no-webui \
-            --host 127.0.0.1 \
-            --port 8001 &> llama.log &
-
+            --repeat-penalty 1.1
+        )
+        PI_MODEL="llama-local/gemma4-26b-4b"
+        PI_JSON="./models-26b-4b.json"
+        DESC="(Gemma 4 26B)"
         ;;
-
     35b)
-        echo "🚀 Starting Qwen 3.5 API Server on http://127.0.0.1:8001 (35B model)"
-
-        AMD_VULKAN_ICD=RADV \
-        llama-server \
-            -m ./models/Qwen3.5-35B-A3B-Q8_0.gguf \
+        MODEL="./models/Qwen3.5-35B-A3B-Q8_0.gguf"
+        LLAMA_ARGS=(
             --ctx-size 262144 \
             --fit-target 512 \
             --flash-attn on \
@@ -61,20 +61,17 @@ case "$1" in
             --parallel 1 \
             --temp 0.6 \
             --top-k 20 \
+            --top-p 0.95 \
             --frequency-penalty 1.0 \
-            --repeat-penalty 1.1 \
-            --no-webui \
-            --host 127.0.0.1 \
-            --port 8001 &> llama.log &
-
+            --repeat-penalty 1.1
+        )
+        PI_MODEL="llama-local/qwen3.5-35b-3b"
+        PI_JSON="./models-35b-3b.json"
+        DESC="(Qwen 3.5 35B)"
         ;;
-
     27b)
-        echo "🚀 Starting Qwen 3.5 API Server on http://127.0.0.1:8001 (27B model)"
-
-        AMD_VULKAN_ICD=RADV \
-        llama-server \
-            -m ./models/Qwen3.5-27B-Q4_K_M.gguf \
+        MODEL="./models/Qwen3.5-27B-Q4_K_M.gguf"
+        LLAMA_ARGS=(
             --ctx-size 65536 \
             --fit-target 512 \
             --flash-attn on \
@@ -84,54 +81,51 @@ case "$1" in
             --parallel 1 \
             --temp 0.6 \
             --top-k 20 \
+            --top-p 0.95 \
             --frequency-penalty 1.0 \
-            --repeat-penalty 1.1 \
-            --no-webui \
-            --host 127.0.0.1 \
-            --port 8001 &> llama.log &
-
+            --repeat-penalty 1.1
+        )
+        PI_MODEL="llama-local/qwen3.5-27b"
+        PI_JSON="./models-27b.json"
+        DESC="(Qwen 3.5 27B)"
         ;;
-
     *)
-        echo "Unknown model: $1" >&2
+        echo "Unknown model: $MODEL_ARG" >&2
         exit 1
         ;;
 esac
+
+echo "🚀 Starting $DESC API Server on http://127.0.0.1:8001 (AMD mode: $USE_AMD)"
+
+# Set environment variables based on GPU mode
+if [ "$USE_AMD" = true ]; then
+    export GPU_ENABLE_WGP_MODE=0
+    export HIP_VISIBLE_DEVICES=0
+else
+    export AMD_VULKAN_ICD=RADV
+fi
+
+# Run llama-server. Using "${LLAMA_ARGS[@]}" preserves individual arguments.
+llama-server -m "$MODEL" "${LLAMA_ARGS[@]}" --no-webui --port 8001 &> llama.log &
+
 
 LLAMA_PID=$!
 
 echo "⏳ Waiting for llama server (see llama.log)" 
 
-
 until curl -s http://127.0.0.1:8001/health | grep -q 'ok'; do
-    # Exit loop if process died, print error and exit script  
     if ! kill -0 "$LLAMA_PID" 2>/dev/null; then
         echo ""
         tail "llama.log" >&2 
         exit 1
     fi
-    
     sleep 3
 done
 
 echo "🟢 llama server ready!"
 
-# --- Pi Config (Pointing to Localhost) ---
 mkdir -p ~/.pi/agent
-
-case "$1" in
-    26b)
-        cp ./models-26b-4b.json ~/.pi/agent/models.json
-        pi --model llama-local/gemma4-26b-4b
-        ;;
-    35b)
-        cp ./models-35b-3b.json ~/.pi/agent/models.json
-        pi --model llama-local/qwen3.5-35b-3b
-        ;;
-    27b)
-        cp ./models-27b.json ~/.pi/agent/models.json
-        pi --model llama-local/qwen3.5-27b
-        ;;
-esac
+cp "$PI_JSON" ~/.pi/agent/models.json
+pi --model "$PI_MODEL"
 
 cleanup
