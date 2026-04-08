@@ -13,6 +13,8 @@ cleanup() {
     [ -n "$LLAMA_PID" ] && kill $LLAMA_PID 2>/dev/null
     exit 0
 }
+# Trap exit signals (Ctrl+C, script end, etc.)
+trap cleanup EXIT INT TERM
 
 # Usage check
 if [[ $# -lt 1 ]]; then
