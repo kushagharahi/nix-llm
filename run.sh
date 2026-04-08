@@ -53,9 +53,7 @@ case "$1" in
         llama-server \
             -m ./models/Qwen3.5-35B-A3B-Q8_0.gguf \
             --ctx-size 262144 \
-            --n-gpu-layers 99 \
-            --n-cpu-moe 40 \
-            --ubatch-size 2048 \
+            --fit-target 512 \
             --flash-attn on \
             --cache-type-k q8_0 \
             --cache-type-v q8_0 \
@@ -78,8 +76,7 @@ case "$1" in
         llama-server \
             -m ./models/Qwen3.5-27B-Q4_K_M.gguf \
             --ctx-size 65536 \
-            --n-gpu-layers 50 \
-            --batch-size 512 \
+            --fit-target 512 \
             --flash-attn on \
             --cache-type-k q8_0 \
             --cache-type-v q8_0 \
