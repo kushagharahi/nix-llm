@@ -9,6 +9,16 @@ Runs QWEN 3.5 35B and [pi.dev](https://pi.dev)
 
 First, download the model to `/models`:
 
+### Gemma 4 26B 4B active parameter
+
+```
+nix shell nixpkgs#python313Packages.huggingface-hub -c huggingface-cli download \
+  unsloth/gemma-4-26B-A4B-it-GGUF\
+  gemma-4-26B-A4B-it-UD-Q5_K_M.gguf \
+  --local-dir ./models
+
+```
+
 ### QWEN 3.5 35B 3B active parameter
 
 Model: https://huggingface.co/unsloth/Qwen3.5-35B-A3B-GGUF 
@@ -18,7 +28,7 @@ Very fast, but only considers 3B params at a time (A3B = active params 3B) aka (
 ```bash
 nix shell nixpkgs#python313Packages.huggingface-hub -c huggingface-cli download \
   unsloth/Qwen3.5-35B-A3B-GGUF \
-  Qwen3.5-35B-A3B-Q8_0.gguf \
+  Qwen3.5-35B-A3B-Q5_K_M.gguf \
   --local-dir ./models
 ```
 
@@ -49,7 +59,7 @@ Both start a llama server on `http://127.0.0.1:8001` and run pi pointing to that
 | :--- | :---:| :---:|
 | `HIP_VISIBLE_DEVICES=0` | Selects discrete GPU only, ignores iGPU of 7900X (Ryzen integrated graphics) on RX 6800 XT with 16GB VRAM to avoid resource conflicts and ensure full memory available for model weights. |
 | `GPU_ENABLE_WGP_MODE=0` | Forces scheduling at individual Compute Unit level rather than Workgroup Processors, more efficient math utilization on RDNA2 architecture (RX 6800 XT). Enables better GPU layer distribution across 16GB VRAM. |
-| `HSA_OVERRIDE_GFX_VERSION=10.3.0` | Treats RX 6800 XT as Radeon Pro V620 (gfx103v), enabling use of Vega/Pro driver optimizations on RDNA2 hardware for stable ROCm execution and improved VRAM management during long context inference at :8001 server port.
+| `AMD_VULKAN_ICD=RADV` | Uses RADV Vulkan ICD instead of AMDs proprietary ICD, better compatibility with llama.cpp on Linux |
 
 ### Parameters
 
@@ -60,8 +70,8 @@ Both start a llama server on `http://127.0.0.1:8001` and run pi pointing to that
 
 | Flag                              | Function                    | Benefit for Setup                                                                                   |
 |:----------------------------------|:----------------------------|:----------------------------------------------------------------------------------------------------|
-| `-m ./models/Qwen3.5-35B-A3B-UD-Q4_K_XL.gguf`  | Model path                  | Q4_K_XL quantization fits in VRAM with room for context                                             |
-| `--ctx-size 65536`                | Context window size         | Maximum context length for long-form generation                                                   |
+| `-m ./models/Qwen3.5-35B-A3B-A-B-Q8_0.gguf`  | Model path                  | Q4_K_XL quantization fits in VRAM with room for context                                             |
+| `--ctx-size 2|`                | Context window size         | Maximum context length for long-form generation                                                   |
 | `--n-gpu-layers 55`               | GPU layers                  | Offload more MoE experts to Vulkan backend on RX 6800 XT                                          |
 
 ### Parameters for Qwen35 27B (run27b.sh)

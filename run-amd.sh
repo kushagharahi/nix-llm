@@ -30,9 +30,7 @@ case "$1" in
         llama-server \
             -m ./models/gemma-4-26B-A4B-it-UD-Q5_K_M.gguf \
             --ctx-size 262144 \
-            --n-gpu-layers 99 \
-            --n-cpu-moe 20 \
-            --ubatch-size 2048 \
+            --fit-target 512 \
             --flash-attn on \
             --cache-type-k q5_1 \
             --cache-type-v q5_1 \
@@ -57,7 +55,7 @@ case "$1" in
             -m ./models/Qwen3.5-35B-A3B-Q5_K_M.gguf \
             --ctx-size 262144 \
             --n-gpu-layers 99 \
-            --n-cpu-moe 20 \
+            --n-cpu-moe 25 \
             --ubatch-size 2048 \
             --flash-attn on \
             --cache-type-k q5_1 \
@@ -126,6 +124,10 @@ echo "🟢 llama server ready!"
 mkdir -p ~/.pi/agent
 
 case "$1" in
+    26b)
+        cp ./models-26b-4b.json ~/.pi/agent/models.json
+        pi --model llama-local/gemma4-26b-4b
+        ;;
     35b)
         cp ./models-35b-3b.json ~/.pi/agent/models.json
         pi --model llama-local/qwen3.5-35b-3b
