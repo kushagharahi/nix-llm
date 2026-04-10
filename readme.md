@@ -24,7 +24,7 @@ Download models into the `./models` directory using `huggingface-cli`.
 ```bash
 nix shell nixpkgs#python313Packages.huggingface-hub -c huggingface-cli download \
   unsloth/gemma-4-26B-A4B-it-GGUF \
-  gemma-4-26B-A4B-it-UD-Q5_K_M.gguf \
+  gemma-4-26B-A4B-it-Q8_0.gguf \
   --local-dir ./models
 ```
 
