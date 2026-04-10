@@ -32,17 +32,16 @@ fi
 # Configuration mapping: model -> {model_path, llama_args, pi_model, pi_json, desc}
 case "$MODEL_ARG" in
     26b)
-        MODEL="./models/gemma-4-26B-A4B-it-UD-Q5_K_M.gguf"
+        MODEL="./models/gemma-4-26B-A4B-it-Q8_0.gguf"
         LLAMA_ARGS=(
             --ctx-size 262144 \
-            --mlock \
             --fit-target 512 \
             --flash-attn on \
-            --cache-type-k q5_1 \
-            --cache-type-v q5_1 \
+            --cache-type-k q8_0 \
+            --cache-type-v q8_0 \
             --threads 11 \
             --parallel 1 \
-            --temp 1.0 \
+            --temp 0.3 \
             --top-k 64 \
             --top-p 0.95 \
             --frequency-penalty 1.0 \
