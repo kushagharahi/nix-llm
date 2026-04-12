@@ -45,7 +45,8 @@ case "$MODEL_ARG" in
             --top-k 64 \
             --top-p 0.95 \
             --frequency-penalty 1.0 \
-            --repeat-penalty 1.1
+            --repeat-penalty 1.1 \
+            --chat-template-file ./chat-template-26b-4b.jinja 
         )
         PI_MODEL="llama-local/gemma4-26b-4b"
         PI_JSON="./models-26b-4b.json"
