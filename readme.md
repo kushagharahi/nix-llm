@@ -1,7 +1,6 @@
 # Local LLM for NixOS
 
 Optimized for **AMD RX 6800XT / Ryzen 7900X** with 32GB RAM.
-Runs Qwen 3.5 and [pi.dev](https://pi.dev).
 
 ![image](./image.png)
 
@@ -12,9 +11,9 @@ To start the LLM server and the Pi agent:
 ```bash
 nix-develop .#agentic
 ```
-This starts a `llama-server` on `http://127.0.0.1:8001` and launches the `pi` TUI pointing to it.
+This starts a `llama-server` on `http://127.0.0.1:8001` and launches the `pi.dev` TUI pointing to it.
 
-### Llama.cpp chat interface 
+### llama.cpp chat interface 
 ```bash
 nix-develop .#ui
 ```
