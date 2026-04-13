@@ -4,7 +4,7 @@
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
     llama-cpp-repo = {
-      url = "github:ggml-org/llama.cpp/3fc65063d9c356510b86fc2f15ca8aea711bfc47";
+      url = "github:ggml-org/llama.cpp/b8772";
       # Force llama.cpp's flake to use OUR nixpkgs version
       inputs.nixpkgs.follows = "nixpkgs";
     };
@@ -21,12 +21,12 @@
       config.allowUnfree = true;
     };
 
-    llama-vulkan =
+    llama-vulkan = {useWebUi ? false}:
       (llama-cpp-repo.packages.${system}.default.override {
         useVulkan = true;
         useRocm = false;
         useCuda = false;
-        useWebUi = false;
+        inherit useWebUi; # This passes the arg through
       }).overrideAttrs (oldAttrs: {
         src = llama-cpp-repo;
 
@@ -45,12 +45,12 @@
         appendRunpaths = ["${placeholder "out"}/lib"];
       });
 
-    llama-amd =
+    llama-amd = {useWebUi ? false}:
       (llama-cpp-repo.packages.${system}.default.override {
         useVulkan = false;
         useRocm = true;
         useCuda = false;
-        useWebUi = false;
+        inherit useWebUi; # This passes the arg through
         # Set GPU target to 6800 xt
         rocmGpuTargets = "gfx1030";
       }).overrideAttrs (oldAttrs: {
@@ -92,40 +92,61 @@
 
     piVersion = "0.65.2";
   in {
-    devShells.${system}.default = pkgs.mkShell {
-      buildInputs = [
-        #llama-amd
-        llama-vulkan
-        pkgs.nodejs
-        pkgs.curl
-      ];
-
-      shellHook = ''
-        # Define a local path for NPM to install things into
-        export PROJECT_ROOT=$(pwd)
-        # The version is baked into the folder name.
-        # Changing the variable automatically 'installs' a new one.
-        export NPM_CONFIG_PREFIX="$PROJECT_ROOT/.nix-node/v${piVersion}"
-
-        # Add that local bin to your PATH
-        export PATH="$NPM_CONFIG_PREFIX/bin:$PATH"
-
-        # Handle the C-Libraries for 'canvas'
-        export LD_LIBRARY_PATH="${pkgs.lib.makeLibraryPath [
-          pkgs.pixman
-          pkgs.cairo
-          pkgs.pango
-        ]}:$LD_LIBRARY_PATH"
-
-        # Check if the SPECIFIC version is installed locally
-        if [ ! -f "$NPM_CONFIG_PREFIX/bin/pi" ]; then
-          echo "📦 Installing pi-coding-agent @${piVersion} locally to .nix-node..."
-          # We use -g but because of the PREFIX above, it stays in this folder
-          npm install -g @mariozechner/pi-coding-agent@${piVersion}
-        fi
-
-        source ./run.sh 26b
+    devShells.${system} = {
+      default = builtins.throw ''
+        Error: Please specify which environment you want to use!
+        Available options:
+          - nix develop .#ui
+          - nix develop .#agentic
       '';
+
+      ui = pkgs.mkShell {
+        buildInputs = [
+          # TODO: Make configurable between AMD and Vulkan
+          #l(llama-amd { useWebUi = true; })
+          (llama-vulkan {useWebUi = true;})
+        ];
+        shellHook = ''
+          source ./run-llama-ui.sh 26b
+        '';
+      };
+
+      agentic = pkgs.mkShell {
+        buildInputs = [
+          # TODO: Make configurable between AMD and Vulkan
+          #(llama-amd { useWebUi = false; })
+          (llama-vulkan {useWebUi = false;})
+          pkgs.nodejs
+          pkgs.curl
+        ];
+
+        shellHook = ''
+          # Define a local path for NPM to install things into
+          export PROJECT_ROOT=$(pwd)
+          # The version is baked into the folder name.
+          # Changing the variable automatically 'installs' a new one.
+          export NPM_CONFIG_PREFIX="$PROJECT_ROOT/.nix-node/v${piVersion}"
+
+          # Add that local bin to your PATH
+          export PATH="$NPM_CONFIG_PREFIX/bin:$PATH"
+
+          # Handle the C-Libraries for 'canvas'
+          export LD_LIBRARY_PATH="${pkgs.lib.makeLibraryPath [
+            pkgs.pixman
+            pkgs.cairo
+            pkgs.pango
+          ]}:$LD_LIBRARY_PATH"
+
+          # Check if the SPECIFIC version is installed locally
+          if [ ! -f "$NPM_CONFIG_PREFIX/bin/pi" ]; then
+            echo "📦 Installing pi-coding-agent @${piVersion} locally to .nix-node..."
+            # We use -g but because of the PREFIX above, it stays in this folder
+            npm install -g @mariozechner/pi-coding-agent@${piVersion}
+          fi
+
+          source ./run-agentic.sh 26b
+        '';
+      };
     };
   };
 }
