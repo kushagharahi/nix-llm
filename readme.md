@@ -7,11 +7,18 @@ Runs Qwen 3.5 and [pi.dev](https://pi.dev).
 
 ## 🚀 Quick Start
 
+### Agentic workflows 
 To start the LLM server and the Pi agent:
 ```bash
-nix-develop
+nix-develop .#agentic
 ```
-This starts a `llama-server` on `http://127.0.0.1:8001` and launches the `pi` interface pointing to it.
+This starts a `llama-server` on `http://127.0.0.1:8001` and launches the `pi` TUI pointing to it.
+
+### Llama.cpp chat interface 
+```bash
+nix-develop .#ui
+```
+This starts a `llama-server` on `http://0.0.0.0:8001`
 
 ---
 
