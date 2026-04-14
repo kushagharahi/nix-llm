@@ -1,0 +1,12 @@
+{
+    "mcpServers": [
+        {
+            "id": "ddg",
+            "name": "DuckDuckGo Search",
+            "url": "http://127.0.0.1:8000/mcp",
+            "enabled": true,
+            "useProxy": true,
+            "headers": ""
+        }
+    ]
+}

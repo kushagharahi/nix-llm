@@ -79,6 +79,6 @@ else
 fi
 
 echo "🚀 Starting $DESC API Server on http://$ADDR:$PORT (AMD mode: $USE_AMD)"
-llama-server -m "$MODEL" "${LLAMA_ARGS[@]}" --host $ADDR --port $PORT --webui-mcp-proxy
+llama-server -m "$MODEL" "${LLAMA_ARGS[@]}" --host $ADDR --port $PORT --webui-mcp-proxy --webui-config-file ./uiConfig.json
 
 cleanup
