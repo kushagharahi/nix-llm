@@ -18,6 +18,23 @@ parse_args() {
 # Function to load model configuration
 load_model_config() {
     case "$MODEL_ARG" in
+        2b)
+            MODEL="./models/gemma-4-E2B-it-Q4_K_M.gguf"
+            LLAMA_ARGS=(
+                --ctx-size 4096 \
+                --fit-target 512 \
+                --flash-attn on \
+                --cache-type-k q4_0 \
+                --cache-type-v q4_0 \
+                --parallel 1 \
+                --temp 0.3 \
+                --top-k 64 \
+                --top-p 0.95 \
+                --frequency-penalty 1.0 \
+                --repeat-penalty 1.1 \
+            )
+            DESC="(Gemma 4 E2B)"
+            ;;
         26b)
             MODEL="./models/gemma-4-26B-A4B-it-Q8_0.gguf"
             LLAMA_ARGS=(
