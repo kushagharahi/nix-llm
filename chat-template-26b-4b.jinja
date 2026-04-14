@@ -147,7 +147,8 @@
 {%- endmacro -%}
 {%- macro strip_thinking(text) -%}
     {%- set ns = namespace(result='') -%}
-    {%- for part in text.split('<channel|>') -%}
+    {%- set tmp = strip_think_tags(text) -%}
+    {%- for part in tmp.split('<channel|>') -%}
         {%- if '<|channel>' in part -%}
             {%- set ns.result = ns.result + part.split('<|channel>')[0] -%}
         {%- else -%}
@@ -155,6 +156,29 @@
         {%- endif -%}
     {%- endfor -%}
     {{- ns.result | trim -}}
+{%- endmacro -%}
+{%- macro strip_think_tags(text) -%}
+    {%- set ns = namespace(result='') -%}
+    {%- for part in text.split('</think>') -%}
+        {%- if '<think>' in part -%}
+            {%- set ns.result = ns.result + part.split('<think>')[0] -%}
+        {%- else -%}
+            {%- set ns.result = ns.result + part -%}
+        {%- endif -%}
+    {%- endfor -%}
+    {{- ns.result -}}
+{%- endmacro -%}
+{%- macro extract_thinking(text) -%}
+    {%- set ns = namespace(result='') -%}
+    {%- for part in text.split('</think>') -%}
+        {%- if '<think>' in part -%}
+            {%- if ns.result -%}
+                {%- set ns.result = ns.result + '\n' -%}
+            {%- endif -%}
+            {%- set ns.result = ns.result + part.split('<think>')[1] -%}
+        {%- endif -%}
+    {%- endfor -%}
+    {{- ns.result -}}
 {%- endmacro -%}
 
 {%- macro format_tool_response_block(tool_name, response) -%}
@@ -232,8 +256,40 @@
         {{- '<|turn>' + role + '\n' }}
     {%- endif -%}
 
-    {#- Render reasoning/reasoning_content as thinking channel -#}
+    {#- Pre-compute: extract thinking and effective (stripped) content -#}
     {%- set thinking_text = message.get('reasoning') or message.get('reasoning_content') -%}
+    {%- set ns_msg = namespace(effective_content='', has_visible_content=false, is_string=false) -%}
+    {%- if message['content'] is string -%}
+        {%- set ns_msg.is_string = true -%}
+        {%- if role == 'model' -%}
+            {%- if not thinking_text and '<think>' in message['content'] -%}
+                {%- set thinking_text = extract_thinking(message['content']) | trim -%}
+            {%- endif -%}
+            {%- set ns_msg.effective_content = strip_thinking(message['content']) -%}
+        {%- else -%}
+            {%- set ns_msg.effective_content = message['content'] | trim -%}
+        {%- endif -%}
+        {%- set ns_msg.has_visible_content = (ns_msg.effective_content | length > 0) -%}
+    {%- elif message['content'] is sequence and message['content'] is not string -%}
+        {%- for item in message['content'] -%}
+            {%- if item['type'] == 'text' -%}
+                {%- if role == 'model' -%}
+                    {%- if not thinking_text and '<think>' in item['text'] -%}
+                        {%- set thinking_text = extract_thinking(item['text']) | trim -%}
+                    {%- endif -%}
+                    {%- if strip_thinking(item['text']) | length > 0 -%}
+                        {%- set ns_msg.has_visible_content = true -%}
+                    {%- endif -%}
+                {%- else -%}
+                    {%- if item['text'] | trim | length > 0 -%}
+                        {%- set ns_msg.has_visible_content = true -%}
+                    {%- endif -%}
+                {%- endif -%}
+            {%- else -%}
+                {%- set ns_msg.has_visible_content = true -%}
+            {%- endif -%}
+        {%- endfor -%}
+    {%- endif -%}
     {%- if thinking_text and loop.index0 > ns_turn.last_user_idx and message.get('tool_calls') -%}
         {{- '<|channel>thought\n' + thinking_text + '\n<channel|>' -}}
     {%- endif -%}
@@ -302,13 +358,9 @@
                 {%- endfor -%}
             {%- endif -%}
 
-            {%- if message['content'] is string -%}
-                {%- if role == 'model' -%}
-                    {{- strip_thinking(message['content']) -}}
-                {%- else -%}
-                    {{- message['content'] | trim -}}
-                {%- endif -%}
-            {%- elif message['content'] is sequence -%}
+            {%- if ns_msg.is_string -%}
+                {{- ns_msg.effective_content -}}
+            {%- elif message['content'] is sequence and message['content'] is not string -%}
                 {%- for item in message['content'] -%}
                     {%- if item['type'] == 'text' -%}
                         {%- if role == 'model' -%}
@@ -331,7 +383,7 @@
 
         {%- if ns.prev_message_type == 'tool_call' and not ns_tr_out.flag -%}
             {{- '<|tool_response>' -}}
-        {%- elif not (ns_tr_out.flag and not message.get('content')) -%}
+        {%- elif not (ns_tr_out.flag and not ns_msg.has_visible_content) -%}
             {{- '<turn|>\n' -}}
         {%- endif -%}
     {%- endif -%}
