@@ -61,8 +61,8 @@ fi
 # We check for the folder in site-packages to be sure
 if ! ./.venv/bin/python -c "import duckduckgo_mcp_server" &> /dev/null; then
     echo "Package not found. Installing..."
-    uv pip install --break-system-packages \
-        --no-cache \
+    uv pip install \
+        --python ./.venv/bin/python \
         git+https://github.com/nickclyde/duckduckgo-mcp-server@72140a7136a52d51ec9fdccdd7ff504959d0a5cf
 else
     echo "DuckDuckGo MCP is already installed. Skipping install."
@@ -79,12 +79,12 @@ else
 fi
 
 # TODO: Make image gen optional
-if [[ "$MODEL_ARG" = "26b" ]]; then 
+if [[ "$MODEL_ARG" = "26b" || "$MODEL_ARG" = "2b" ]]; then 
     MMPROJ_PATH="./models/mmproj-BF16.gguf"
     # Check if the multimodal projection file actually exists
     if [[ -f "$MMPROJ_PATH" ]]; then
         LLAMA_ARGS+=(
-            --mmproj .$MMPROJ_PATH \
+            --mmproj $MMPROJ_PATH \
             --image-min-tokens 300 \
             --image-max-tokens 512
         )

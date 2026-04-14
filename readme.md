@@ -83,3 +83,26 @@ To maximize performance on **AMD RDNA2** hardware, these configurations are appl
 | `--cache-type-k/v q8_0`* | Quantized KV Cache (varies by model).                         | Significantly reduces VRAM usage for large contexts.     |
 | `--threads 11`         | Fixed CPU thread count optimized for the host architecture.  | Optimized core utilization.                             |
 | `--no-webui`           | Disables Web UI to minimize overhead.                        | Focuses resources on API and Agent performance.          |
+
+-----
+
+### M1 Mac 8gb
+
+Install Nix via [Determinate](https://github.com/DeterminateSystems/determinate)
+
+### Gemma 4 E2B
+*TODO: What does the E mean*
+```bash
+nix run nixpkgs#python313Packages.huggingface-hub -- download \
+  unsloth/gemma-4-E2B-it-GGUF \
+    gemma-4-E2B-it-Q4_K_M.gguf \
+  --local-dir ./models
+```
+
+#### multimedia projector aka image gen additional download
+```bash
+nix run nixpkgs#python313Packages.huggingface-hub -- download \
+  unsloth/gemma-4-E2B-it-GGUF \
+  mmproj-BF16.gguf \
+  --local-dir ./models
+```
