@@ -25,8 +25,6 @@ echo "🚀 Starting $DESC API Server on http://127.0.0.1:8001 (AMD mode: $USE_AM
 
 # Run llama-server. Using "${LLAMA_ARGS[@]}" preserves individual arguments.
 llama-server -m "$MODEL" "${LLAMA_ARGS[@]}" --no-webui --port 8001 &> llama.log &
-
-
 LLAMA_PID=$!
 
 echo "⏳ Waiting for llama server (see llama.log)" 
