@@ -106,3 +106,8 @@ nix run nixpkgs#python313Packages.huggingface-hub -- download \
   mmproj-BF16.gguf \
   --local-dir ./models
 ```
+
+### Run for a llama-ui with Gemma E2B with image/audio support
+```bash
+nix develop
+```
