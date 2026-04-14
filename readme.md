@@ -11,13 +11,13 @@ To start the LLM server and the Pi agent:
 ```bash
 nix-develop .#agentic
 ```
-This starts a `llama-server` on `http://127.0.0.1:8001` and launches the `pi.dev` TUI pointing to it.
+This starts a `llama-server` on `http://127.0.0.1:8080` and launches the `pi.dev` TUI pointing to it.
 
 ### llama.cpp chat interface 
 ```bash
 nix-develop .#ui
 ```
-This starts a `llama-server` on `http://0.0.0.0:8001`
+This starts a `llama-server` on `http://0.0.0.0:8080` or `http://<local_ipv4>:8080`
 
 ---
 
