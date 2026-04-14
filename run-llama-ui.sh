@@ -4,12 +4,6 @@
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/llama-common.sh"
 
-#!/usr/bin/env bash 
-
-# Get the directory where run.sh is located 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "$SCRIPT_DIR/llama-common.sh"
-
 parse_args "$@" || exit 1
 load_model_config || exit 1
 

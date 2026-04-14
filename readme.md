@@ -56,26 +56,22 @@ nix shell nixpkgs#python313Packages.huggingface-hub -c huggingface-cli download 
 
 ---
 
-## ⚙️ Hardware Optimization (AMD GPU)
+## ⚙️ Hardware Optimizations (AMD GPU)
 
-These environment variables are configured in `run.sh` to optimize performance on RDNA2 architectures:
+To maximize performance on **AMD RDNA2** hardware, these configurations are applied via `llama-common.sh`:
 
+### Environment Variables
 | Variable | Purpose | Benefit |
 | :--- | :--- | :--- |
-| `HIP_VISIBLE_DEVICES=0` | Selects discrete GPU only, ignores iGPU of 7900X (Ryzen integrated graphics) on RX 6800 XT with 16GB VRAM to avoid resource conflicts and ensure full memory available for model weights. | Prevents resource conflicts and ensures full memory availability. |
-| `GPU_ENABLE_WGP_MODE=0` | Forces scheduling at individual Compute Unit level rather than Workgroup Processors, more efficient math utilization on RDNA2 architecture (RX 6800 XT). Enables better GPU layer distribution across 16GB VRAM. | Improved math utilization and layer distribution. |
-| `AMD_VULKAN_ICD=RADV` | Uses RADV Vulkan ICD instead of AMDs proprietary ICD, better compatibility with llama.cpp on Linux | Better compatibility/performance with `llama.cpp`. |
+| `HIP_VISIBLE_DEVICES=0` | Selects discrete GPU only (ignores iGPU) to ensure full VRAM availability for model weights. | Prevents resource conflicts and ensures max memory usage. |
+| `GPU_ENABLE_WGP_MODE=0` | Forces scheduling at individual Compute Unit level rather than Workgroup Processors. | Improved math utilization and better layer distribution on RDNA2. |
+| `AMD_VULKAN_ICD=RADV`  | Uses RADV Vulkan ICD instead of AMD's proprietary driver. | Better compatibility/performance with `llama.cpp`. |
 
----
-
-## 🛠️ Implementation Details (`run.sh`)
-
-The following core optimizations are applied to all models:
-
+### llama-server Flags
 | Flag | Description | Optimization Goal |
 | :--- | :--- | :--- |
-| `--flash-attn on` | Enables Flash Attention. | Faster inference and reduced memory overhead. |
-| `--mlock` | Locks model in RAM. | Prevents OS swapping; ensures consistent latency. |
-| `--cache-type-k/v q8_0`*| Quantized KV Cache. | Significantly reduces VRAM usage for large contexts ($*$varies by model). |
-| `--threads 11` | Fixed CPU thread count. | Optimized for the host's physical core architecture. |
-| `--no-webui` | Disables Web UI. | Minimizes overhead, focusing resources on the API and Agent. |
+| `--flash-attn on`     | Enables Flash Attention.                                     | Faster inference and reduced memory overhead.           |
+| `--mlock`              | Locks model in RAM.                                           | Prevents OS swapping; ensures consistent latency.        |
+| `--cache-type-k/v q8_0`* | Quantized KV Cache (varies by model).                         | Significantly reduces VRAM usage for large contexts.     |
+| `--threads 11`         | Fixed CPU thread count optimized for the host architecture.  | Optimized core utilization.                             |
+| `--no-webui`           | Disables Web UI to minimize overhead.                        | Focuses resources on API and Agent performance.          |
