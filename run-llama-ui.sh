@@ -56,7 +56,7 @@ else
 fi
 
 echo "🚀 Starting $DESC API Server on http://$ADDR:8001 (AMD mode: $USE_AMD)"
-llama-server -m "$MODEL" "${LLAMA_ARGS[@]}" --host 0.0.0.0 --port 8001 & 
+llama-server -m "$MODEL" "${LLAMA_ARGS[@]}" --host $ADDR --port 8001 & 
 LLAMA_PID=$!
 
 wait
