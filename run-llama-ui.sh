@@ -80,16 +80,16 @@ fi
 
 # TODO: Make image gen optional
 if [[ "$MODEL_ARG" = "26b" ]]; then 
+    MMPROJ_PATH="./models/mmproj-BF16.gguf"
     # Check if the multimodal projection file actually exists
-    if [[ -f "./models/mmproj-BF16.gguf" ]]; then
+    if [[ -f "$MMPROJ_PATH" ]]; then
         LLAMA_ARGS+=(
-            --mmproj ./models/mmproj-BF16.gguf \
+            --mmproj .$MMPROJ_PATH \
             --image-min-tokens 300 \
             --image-max-tokens 512
         )
     else
-        echo "⚠️  Warning: Model is set to '26b', but './models/mmproj-BF16.gguf' was not found."
-        echo "    Image generation will be disabled."
+        echo "⚠️ Warning: Model is set to '26b', but '$MMPROJ_PATH' was not found. Image generation will be disabled."
     fi
 fi
 
