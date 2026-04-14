@@ -80,11 +80,17 @@ fi
 
 # TODO: Make image gen optional
 if [[ "$MODEL_ARG" = "26b" ]]; then 
-    LLAMA_ARGS+=(
-        --mmproj ./models/mmproj-BF16.gguf \
-        --image-min-tokens 300 \
-        --image-max-tokens 512
+    # Check if the multimodal projection file actually exists
+    if [[ -f "./models/mmproj-BF16.gguf" ]]; then
+        LLAMA_ARGS+=(
+            --mmproj ./models/mmproj-BF16.gguf \
+            --image-min-tokens 300 \
+            --image-max-tokens 512
         )
+    else
+        echo "⚠️  Warning: Model is set to '26b', but './models/mmproj-BF16.gguf' was not found."
+        echo "    Image generation will be disabled."
+    fi
 fi
 
 echo "🚀 Starting $DESC API Server on http://$ADDR:$PORT (AMD mode: $USE_AMD)"
