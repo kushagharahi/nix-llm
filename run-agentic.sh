@@ -21,15 +21,16 @@ trap cleanup EXIT INT TERM
 parse_args "$@" || exit 1
 load_model_config || exit 1
 
-echo "🚀 Starting $DESC API Server on http://127.0.0.1:8001 (AMD mode: $USE_AMD)"
+PORT="8080"
+echo "🚀 Starting $DESC API Server on http://127.0.0.1:$PORT (AMD mode: $USE_AMD)"
 
 # Run llama-server. Using "${LLAMA_ARGS[@]}" preserves individual arguments.
-llama-server -m "$MODEL" "${LLAMA_ARGS[@]}" --no-webui --port 8001 &> llama.log &
+llama-server -m "$MODEL" "${LLAMA_ARGS[@]}" --no-webui --port $PORT &> llama.log &
 LLAMA_PID=$!
 
 echo "⏳ Waiting for llama server (see llama.log)" 
 
-until curl -s http://127.0.0.1:8001/health | grep -q 'ok'; do
+until curl -s http://127.0.0.1:$PORT/health | grep -q 'ok'; do
     if ! kill -0 "$LLAMA_PID" 2>/dev/null; then
         echo ""
         tail "llama.log" >&2 

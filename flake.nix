@@ -105,8 +105,13 @@
           # TODO: Make configurable between AMD and Vulkan
           #l(llama-amd { useWebUi = true; })
           (llama-vulkan {useWebUi = true;})
+          pkgs.uv
+          pkgs.python313
         ];
         shellHook = ''
+          # Prevent uv from downloading its own unpatched pythons
+          export UV_PYTHON_PREFERENCE=managed
+          export UV_PYTHON=$(which python3)
           source ./run-llama-ui.sh 26b
         '';
       };
