@@ -78,6 +78,15 @@ else
     ADDR="0.0.0.0"
 fi
 
+# TODO: Make image gen optional
+if [[ "$MODEL_ARG" = "26b" ]]; then 
+    LLAMA_ARGS+=(
+        --mmproj ./models/mmproj-BF16.gguf \
+        --image-min-tokens 300 \
+        --image-max-tokens 512
+        )
+fi
+
 echo "🚀 Starting $DESC API Server on http://$ADDR:$PORT (AMD mode: $USE_AMD)"
 llama-server -m "$MODEL" "${LLAMA_ARGS[@]}" --host $ADDR --port $PORT --webui-mcp-proxy --webui-config-file ./uiConfig.json
 

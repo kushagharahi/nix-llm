@@ -34,6 +34,14 @@ nix shell nixpkgs#python313Packages.huggingface-hub -c huggingface-cli download 
   --local-dir ./models
 ```
 
+#### multimedia projector aka image gen additional download
+```bash
+nix shell nixpkgs#python313Packages.huggingface-hub -c huggingface-cli download \
+  unsloth/gemma-4-26B-A4B-it-GGUF \
+  mmproj-BF16.gguf \
+  --local-dir ./models
+```
+
 ### Qwen 3.5 35B (MoE)
 *Active parameters: ~3B. Extremely fast Mixture of Experts model.*
 [Hugging Face Link](https://huggingface.co/unsloth/Qwen3.5-35B-A3B-GGUF)
