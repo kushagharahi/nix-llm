@@ -3,18 +3,20 @@
 # Function to parse arguments and set up common variables
 parse_args() {
     if [[ $# -lt 1 ]]; then
-        echo "Usage: $0 <26b|35b|27b> [--amd]" >&2
+        echo "Usage: $0 <2b|26b|35b|27b> [--amd] [--metal]" >&2
         return 1
     fi
 
     MODEL_ARG=$1
     USE_AMD=false
+    USE_METAL=false
 
     if [[ "$2" == "--amd" ]]; then
         USE_AMD=true
+    elif [[ "$2" == "--metal" ]]; then
+        USE_METAL=true
     fi
 }
-
 # Function to load model configuration
 load_model_config() {
     case "$MODEL_ARG" in
@@ -104,10 +106,10 @@ load_model_config() {
     esac
 
     # Set environment variables based on GPU mode if USE_AMD is set (passed from caller)
-    if [ "$USE_AMD" = true ]; then
+    if [[ "$USE_AMD" == true ]]; then
         export GPU_ENABLE_WGP_MODE=0
         export HIP_VISIBLE_DEVICES=0
-    else
+    elif [[ "$USE_METAL" == false ]]; then
         export AMD_VULKAN_ICD=RADV
     fi
 }

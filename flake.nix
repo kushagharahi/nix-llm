@@ -6,7 +6,8 @@
     llama-cpp-repo = {
       #url = "/Users/kushag/Documents/Projects/llama.cpp";
       url = "github:ggml-org/llama.cpp/b8783";
-      # Force llama.cpp's flake to use OUR nixpkgs version
+      # Force llama.cpp's flake to use OUR nixpkgs version 
+      # (llama.cpp is pinned to 25.05)
       inputs.nixpkgs.follows = "nixpkgs";
     };
   };
@@ -204,7 +205,7 @@
             # Prevent uv from downloading its own unpatched pythons
             export UV_PYTHON_PREFERENCE=managed
             export UV_PYTHON=$(which python3)
-            source ./run-llama-ui.sh 2b
+            source ./run-llama-ui.sh 2b --metal
           '';
         };
       };
