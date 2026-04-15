@@ -95,7 +95,7 @@ Install Nix via [Determinate](https://github.com/DeterminateSystems/determinate)
 ```bash
 nix run nixpkgs#python313Packages.huggingface-hub -- download \
   unsloth/gemma-4-E2B-it-GGUF \
-    gemma-4-E2B-it-Q4_K_M.gguf \
+  gemma-4-E2B-it-Q4_K_M.gguf \
   --local-dir ./models
 ```
 
