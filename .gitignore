@@ -2,3 +2,4 @@ models/*
 gpucore*
 llama.log
 .nix-node/*
+.playwright-runtime/*
