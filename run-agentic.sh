@@ -2,7 +2,9 @@
 
 # Get the directory where run.sh is located 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "$SCRIPT_DIR/llama-common.sh"
+source "$SCRIPT_DIR/env-setup.sh"
+
+parse_args "$@" || exit 1
 
 # Graceful shutdown 
 cleanup() {
@@ -17,20 +19,15 @@ cleanup() {
 # Trap exit signals (Ctrl+C, script end, etc.)
 trap cleanup EXIT INT TERM
 
-# Usage check
-parse_args "$@" || exit 1
-load_model_config || exit 1
+echo "🚀 Starting llama API Server (Router Mode) (AMD mode: $USE_AMD, Metal mode: $USE_METAL)"
 
-PORT="8080"
-echo "🚀 Starting $DESC API Server on http://127.0.0.1:$PORT (AMD mode: $USE_AMD)"
-
-# Run llama-server. Using "${LLAMA_ARGS[@]}" preserves individual arguments.
-llama-server -m "$MODEL" "${LLAMA_ARGS[@]}" --no-webui --port $PORT &> llama.log &
+# Run llama-server in Router Mode using the preset file for all models
+llama-server $LLAMA_COMMON_ARGS --port 8080 --no-webui &> llama.log &
 LLAMA_PID=$!
 
 echo "⏳ Waiting for llama server (see llama.log)" 
 
-until curl -s http://127.0.0.1:$PORT/health | grep -q 'ok'; do
+until curl -s http://127.0.0.1:8080/health | grep -q 'ok'; do
     if ! kill -0 "$LLAMA_PID" 2>/dev/null; then
         echo ""
         tail "llama.log" >&2 
@@ -41,8 +38,8 @@ done
 
 echo "🟢 llama server ready!"
 
-mkdir -p ~/.pi/agent
-cp "$PI_JSON" ~/.pi/agent/models.json
-pi --model "$PI_MODEL"
+# Tell the agent to use this repo's local config and session storage (everything in agent-config)
+export PI_CODING_AGENT_DIR="$SCRIPT_DIR/agent-config"
+pi
 
 cleanup
