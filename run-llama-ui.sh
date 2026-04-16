@@ -2,11 +2,10 @@
 
 # Get the directory where run.sh is located 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "$SCRIPT_DIR/llama-common.sh"
-
+source "$SCRIPT_DIR/env-setup.sh"
 
 parse_args "$@" || exit 1
-load_model_config || exit 1
+
 PORT="8080"
 
 # Graceful shutdown 
@@ -80,29 +79,17 @@ echo "🚀 Starting Playwright MCP server..."
 npx @playwright/mcp@v0.0.70 --port 8931 --executable-path "$(nix eval --raw nixpkgs#playwright-driver.browsers.outPath)/chromium-1194/chrome-linux/chrome" &
 PLAYWRIGHT_MCP_PID=$!
 
-# Run llama-server. Using "${LLAMA_ARGS[@]}" preserves individual arguments.
+# Determine address based on firewall
 if [[ "$OPEN_FIREWALL" = true ]]; then
     ADDR=$(hostname -I | awk '{print $1}')
 else
     ADDR="0.0.0.0"
 fi
 
-# TODO: Make image gen optional
-if [[ "$MODEL_ARG" = "26b" || "$MODEL_ARG" = "2b" ]]; then 
-    MMPROJ_PATH="./models/mmproj-BF16.gguf"
-    # Check if the multimodal projection file actually exists
-    if [[ -f "$MMPROJ_PATH" ]]; then
-        LLAMA_ARGS+=(
-            --mmproj $MMPROJ_PATH \
-            --image-min-tokens 300 \
-            --image-max-tokens 512
-        )
-    else
-        echo "⚠️ Warning: Model is set to '26b', but '$MMPROJ_PATH' was not found. Image generation will be disabled."
-    fi
-fi
+echo "🚀 Starting llama API Server (Router Mode) on http://$ADDR:$PORT (AMD mode: $USE_AMD, Metal mode: $USE_METAL)"
 
-echo "🚀 Starting $DESC API Server on http://$ADDR:$PORT (AMD mode: $USE_AMD)"
-llama-server -m "$MODEL" "${LLAMA_ARGS[@]}" --host $ADDR --port $PORT --webui-mcp-proxy --webui-config-file ./uiConfig.json
+# Run llama-server in Router Mode using the preset file for all models
+llama-server $LLAMA_COMMON_ARGS --host $ADDR --port $PORT --webui-mcp-proxy --webui-config-file ./uiConfig.json &
+LLAMA_PID=$!
 
 cleanup

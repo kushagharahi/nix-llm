@@ -3,3 +3,6 @@ gpucore*
 llama.log
 .nix-node/*
 .playwright-runtime/*
+.playwright-mcp/*
+agent-config/*
+!agent-config/models.json

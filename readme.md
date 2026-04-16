@@ -23,7 +23,7 @@ This starts a `llama-server` on `http://0.0.0.0:8080` or `http://<local_ipv4>:80
 
 ## 📥 Model Installation
 
-Download models into the `./models` directory using `huggingface-cli`.
+Download models into organized subdirectories within `./models/`. This structure allows `llama-server` to automatically discover models when using `--models-dir ./models --models-preset models.ini`.
 
 ### Gemma 4 26B (MoE)
 *Active parameters: ~4B. High speed, efficient reasoning.*
@@ -31,7 +31,7 @@ Download models into the `./models` directory using `huggingface-cli`.
 nix shell nixpkgs#python313Packages.huggingface-hub -c huggingface-cli download \
   unsloth/gemma-4-26B-A4B-it-GGUF \
   gemma-4-26B-A4B-it-Q8_0.gguf \
-  --local-dir ./models
+  --local-dir ./models/gemma-4-26b
 ```
 
 #### multimedia projector aka image gen additional download
@@ -39,7 +39,7 @@ nix shell nixpkgs#python313Packages.huggingface-hub -c huggingface-cli download 
 nix shell nixpkgs#python313Packages.huggingface-hub -c huggingface-cli download \
   unsloth/gemma-4-26B-A4B-it-GGUF \
   mmproj-BF16.gguf \
-  --local-dir ./models
+  --local-dir ./models/gemma-4-26b/multimodal
 ```
 
 ### Qwen 3.5 35B (MoE)
@@ -48,8 +48,8 @@ nix shell nixpkgs#python313Packages.huggingface-hub -c huggingface-cli download 
 ```bash
 nix shell nixpkgs#python313Packages.huggingface-hub -c huggingface-cli download \
   unsloth/Qwen3.5-35B-A3B-GGUF \
-  Qwen3.5-35B-A3B-Q8_0.gguf \
-  --local-dir ./models
+  Qwen3.5-35B-A3B-Q5_K_M.gguf \
+  --local-dir ./models/qwen3.5-35b
 ```
 
 ### Qwen 3.5 27B (Dense)
@@ -59,7 +59,7 @@ nix shell nixpkgs#python313Packages.huggingface-hub -c huggingface-cli download 
 nix shell nixpkgs#python313Packages.huggingface-hub -c huggingface-cli download \
   unsloth/Qwen3.5-27B-GGUF \
   Qwen3.5-27B-Q4_K_M.gguf \
-  --local-dir ./models
+  --local-dir ./models/qwen3.5-27b
 ```
 
 ---
@@ -96,7 +96,7 @@ Install Nix via [Determinate](https://github.com/DeterminateSystems/determinate)
 nix run nixpkgs#python313Packages.huggingface-hub -- download \
   unsloth/gemma-4-E2B-it-GGUF \
   gemma-4-E2B-it-Q4_K_M.gguf \
-  --local-dir ./models
+  --local-dir ./models/gemma-4-e2b
 ```
 
 #### multimedia projector aka image gen additional download
@@ -104,7 +104,7 @@ nix run nixpkgs#python313Packages.huggingface-hub -- download \
 nix run nixpkgs#python313Packages.huggingface-hub -- download \
   unsloth/gemma-4-E2B-it-GGUF \
   mmproj-BF16.gguf \
-  --local-dir ./models
+  --local-dir ./models/gemma-4-e2b/multimodal
 ```
 
 ### Run for a llama-ui with Gemma E2B with image/audio support
