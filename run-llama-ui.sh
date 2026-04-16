@@ -90,6 +90,7 @@ echo "🚀 Starting llama API Server (Router Mode) on http://$ADDR:$PORT (AMD mo
 
 # Run llama-server in Router Mode using the preset file for all models
 llama-server $LLAMA_COMMON_ARGS --host $ADDR --port $PORT --webui-mcp-proxy --webui-config-file ./uiConfig.json &
+
 LLAMA_PID=$!
 
-cleanup
+wait $LLAMA_PID
