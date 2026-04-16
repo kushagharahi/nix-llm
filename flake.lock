@@ -26,13 +26,18 @@
         ]
       },
       "locked": {
-        "narHash": "sha256-0pynsToJhtj0/aN0a4gaa+X/Pj5EZDUiZ2C4hrlFaoo=",
-        "path": "/Users/kushag/Documents/Projects/llama.cpp",
-        "type": "path"
+        "lastModified": 1776272691,
+        "narHash": "sha256-qm4rgzRHL/uDw7wTU3COdMldZMvmGmt1KhQReIPhKVQ=",
+        "owner": "ggml-org",
+        "repo": "llama.cpp",
+        "rev": "b3d758750a268bf93f084ccfa3060fb9a203192a",
+        "type": "github"
       },
       "original": {
-        "path": "/Users/kushag/Documents/Projects/llama.cpp",
-        "type": "path"
+        "owner": "ggml-org",
+        "ref": "b8807",
+        "repo": "llama.cpp",
+        "type": "github"
       }
     },
     "nixpkgs": {

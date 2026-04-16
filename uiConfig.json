@@ -7,6 +7,14 @@
             "enabled": true,
             "useProxy": true,
             "headers": ""
+        },
+        {
+            "id": "playwright",
+            "name": "Playwright Browser Automation",
+            "url": "http://localhost:8931/mcp",
+            "enabled": true,
+            "useProxy": true,
+            "headers": ""
         }
     ]
 }

@@ -22,6 +22,9 @@ cleanup() {
 
     [ -n "$MCP_PID" ] && kill $DDGMCP_PID 2>/dev/null
 
+    # Kill Playwright MCP
+    [ -n "$PLAYWRIGHT_MCP_PID" ] && kill $PLAYWRIGHT_MCP_PID 2>/dev/null
+
     # Kill the llama server specifically  
     [ -n "$LLAMA_PID" ] && kill $LLAMA_PID 2>/dev/null
 
@@ -70,6 +73,12 @@ fi
 ./.venv/bin/duckduckgo-mcp-server --transport streamable-http &
 MCP_PID=$!
 
+# 3. Start Playwright MCP Server (via npx)
+# We run this in standalone mode on port 8931 so llama-server can proxy it via SSE
+# 3. Start Playwright MCP Server
+echo "🚀 Starting Playwright MCP server..."
+npx @playwright/mcp@v0.0.70 --port 8931 --executable-path "$(nix eval --raw nixpkgs#playwright-driver.browsers.outPath)/chromium-1194/chrome-linux/chrome" &
+PLAYWRIGHT_MCP_PID=$!
 
 # Run llama-server. Using "${LLAMA_ARGS[@]}" preserves individual arguments.
 if [[ "$OPEN_FIREWALL" = true ]]; then
