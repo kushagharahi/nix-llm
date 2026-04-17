@@ -1,4 +1,14 @@
-#!/usr/bin/env bash 
+#!/usr/bin/env bash
+
+export PI_VERSION="0.65.2"
+export NPM_CONFIG_PREFIX="$(pwd)/.nix-node/v${PI_VERSION}"
+export PATH="$NPM_CONFIG_PREFIX/bin:$PATH"
+# Install pi if not already present at this versioned prefix.
+if [ ! -f "$NPM_CONFIG_PREFIX/bin/pi" ]; then
+    echo "📦 Installing pi-coding-agent @${PI_VERSION} locally to .nix-node..."
+    # We use -g but because of the PREFIX above, it stays in this folder
+    npm install -g @mariozechner/pi-coding-agent@${PI_VERSION}
+fi
 
 # Get the directory where run.sh is located 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"

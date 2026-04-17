@@ -1,6 +1,10 @@
-#!/usr/bin/env bash 
+#!/usr/bin/env bash
 
-# Get the directory where run.sh is located 
+# Prevent uv from downloading its own unpatched pythons
+export UV_PYTHON_PREFERENCE=managed
+export UV_PYTHON=$(which python3)
+
+# Get the directory where run.sh is located
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/env-setup.sh"
 source "$SCRIPT_DIR/mcp.sh"
