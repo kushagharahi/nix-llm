@@ -6,3 +6,4 @@ llama.log
 .playwright-mcp/*
 agent-config/*
 !agent-config/models.json
+!agent-config/settings.json

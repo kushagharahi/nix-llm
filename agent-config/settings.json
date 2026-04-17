@@ -1,0 +1,6 @@
+{
+  "lastChangelogVersion": "0.67.6",
+  "defaultProvider": "local-router",
+  "defaultModel": "qwen3.6-35b",
+  "enableInstallTelemetry": "false"
+}
