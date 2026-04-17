@@ -28,7 +28,15 @@
       };
     pkgsLinux = mkPkgs linux;
     pkgsMac = mkPkgs mac;
-    piVersion = "0.65.2";
+
+    # Shared cmake flags across all llama.cpp builds
+    commonCmakeFlags = [
+      "-DCMAKE_BUILD_TYPE=Release"
+      # Link Time Optimization (5-15% speedup, slower build)
+      "-DGGML_LTO=ON"
+      # Native CPU optimizations
+      "-DGGML_NATIVE=ON"
+    ];
 
     llama-vulkan = {useWebUi ? false}:
       (llama-cpp-repo.packages.${linux}.default.override {
@@ -38,20 +46,7 @@
         inherit useWebUi; # This passes the arg through
       }).overrideAttrs
       (oldAttrs: {
-        src = llama-cpp-repo;
-
-        # version must be an integer string for C++ LLAMA_BUILD_NUMBER
-        version = "0";
-
-        cmakeFlags =
-          oldAttrs.cmakeFlags
-          ++ [
-            "-DCMAKE_BUILD_TYPE=Release"
-            # Link Time Optimization (5-15% speedup, slower build)
-            "-DGGML_LTO=ON"
-            # Native CPU optimizations
-            "-DGGML_NATIVE=ON"
-          ];
+        cmakeFlags = oldAttrs.cmakeFlags ++ commonCmakeFlags;
         appendRunpaths = ["${placeholder "out"}/lib"];
       });
 
@@ -65,35 +60,22 @@
         rocmGpuTargets = "gfx1030";
       }).overrideAttrs
       (oldAttrs: {
-        src = llama-cpp-repo;
-
-        # version must be an integer string for C++ LLAMA_BUILD_NUMBER
-        version = "0";
-
         buildInputs = oldAttrs.buildInputs ++ [pkgsLinux.rocmPackages.rocwmma];
 
         cmakeFlags =
           oldAttrs.cmakeFlags
+          ++ commonCmakeFlags
           ++ [
             # Explicitly route the Nix headers to the compilers
             "-DCMAKE_CXX_FLAGS=-I${pkgsLinux.rocmPackages.rocwmma}/include"
             "-DCMAKE_HIP_FLAGS=-I${pkgsLinux.rocmPackages.rocwmma}/include"
-
-            "-DCMAKE_BUILD_TYPE=Release"
-            # Link Time Optimization (5-15% speedup, slower build)
-            "-DGGML_LTO=ON"
-            # Native CPU optimizations
-            "-DGGML_NATIVE=ON"
             # --- RDNA2 / gfx1030 specific flags ---
             # Enable rocWMMA flash attention for AMD GPUs
             "-DGGML_HIP_ROCWMMA_FATTN=ON"
-
             # Force Matrix Multiply Quantized kernels (lowers VRAM for quantized models)
             "-DGGML_CUDA_FORCE_MMQ=ON"
-
             # Optional: Disable Virtual Memory Management (stabilizes RDNA2 cards in Linux)
             "-DGGML_HIP_NO_VMM=ON"
-
             # Optional: Enable all KV Cache quantization permutations (warning: increases compile time)
             "-DGGML_CUDA_FA_ALL_QUANTS=ON"
           ];
@@ -108,21 +90,7 @@
         useCuda = false;
       }).overrideAttrs
       (oldAttrs: {
-        src = llama-cpp-repo;
-
-        # version must be an integer string for C++ LLAMA_BUILD_NUMBER
-        version = "0";
-
-        cmakeFlags =
-          oldAttrs.cmakeFlags
-          ++ [
-            "-DGGML_METAL=ON"
-            "-DCMAKE_BUILD_TYPE=Release"
-            # Link Time Optimization (5-15% speedup, slower build)
-            "-DGGML_LTO=ON"
-            # Native CPU optimizations
-            "-DGGML_NATIVE=ON"
-          ];
+        cmakeFlags = oldAttrs.cmakeFlags ++ commonCmakeFlags ++ ["-DGGML_METAL=ON"];
         appendRunpaths = ["${placeholder "out"}/lib"];
       });
   in {
@@ -137,7 +105,7 @@
       ui = pkgsLinux.mkShell {
         buildInputs = [
           # TODO: Make configurable between AMD and Vulkan
-          #l(llama-amd { useWebUi = true; })
+          #(llama-amd { useWebUi = true; })
           (llama-vulkan {useWebUi = true;})
           pkgsLinux.uv
           pkgsLinux.python313
@@ -145,9 +113,6 @@
           pkgsLinux.playwright-driver.browsers
         ];
         shellHook = ''
-          # Prevent uv from downloading its own unpatched pythons
-          export UV_PYTHON_PREFERENCE=managed
-          export UV_PYTHON=$(which python3)
           source ./run-llama-ui.sh
         '';
       };
@@ -160,17 +125,7 @@
           pkgsLinux.nodejs
           pkgsLinux.curl
         ];
-
         shellHook = ''
-          # Define a local path for NPM to install things into
-          export PROJECT_ROOT=$(pwd)
-          # The version is baked into the folder name.
-          # Changing the variable automatically 'installs' a new one.
-          export NPM_CONFIG_PREFIX="$PROJECT_ROOT/.nix-node/v${piVersion}"
-
-          # Add that local bin to your PATH
-          export PATH="$NPM_CONFIG_PREFIX/bin:$PATH"
-
           # Handle the C-Libraries for 'canvas'
           export LD_LIBRARY_PATH="${
             pkgsLinux.lib.makeLibraryPath [
@@ -179,13 +134,6 @@
               pkgsLinux.pango
             ]
           }:$LD_LIBRARY_PATH"
-
-          # Check if the SPECIFIC version is installed locally
-          if [ ! -f "$NPM_CONFIG_PREFIX/bin/pi" ]; then
-            echo "📦 Installing pi-coding-agent @${piVersion} locally to .nix-node..."
-            # We use -g but because of the PREFIX above, it stays in this folder
-            npm install -g @mariozechner/pi-coding-agent@${piVersion}
-          fi
 
           source ./run-agentic.sh
         '';
@@ -201,9 +149,6 @@
           pkgsMac.nodejs
         ];
         shellHook = ''
-          # Prevent uv from downloading its own unpatched pythons
-          export UV_PYTHON_PREFERENCE=managed
-          export UV_PYTHON=$(which python3)
           source ./run-llama-ui.sh --metal
         '';
       };
