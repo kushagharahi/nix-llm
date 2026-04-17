@@ -17,7 +17,11 @@ This starts a `llama-server` on `http://127.0.0.1:8080` and launches the `pi.dev
 ```bash
 nix-develop .#ui
 ```
-This starts a `llama-server` on `http://0.0.0.0:8080` or `http://<local_ipv4>:8080`
+This starts a `llama.cpp` UI on `http://0.0.0.0:8080` or `http://<local_ipv4>:8080`
+
+Additionally it runs 
+- [DuckDuckGo-mcp-server](https://github.com/nickclyde/duckduckgo-mcp-server/)
+- [Playwright-mcp](https://github.com/microsoft/playwright-mcp)
 
 ---
 

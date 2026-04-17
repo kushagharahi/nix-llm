@@ -3,6 +3,7 @@
 # Get the directory where run.sh is located 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/env-setup.sh"
+source "$SCRIPT_DIR/mcp.sh"
 
 parse_args "$@" || exit 1
 
@@ -19,10 +20,8 @@ cleanup() {
         sudo iptables -D INPUT -p tcp --dport $PORT -j ACCEPT 2>/dev/null
     fi
 
-    [ -n "$MCP_PID" ] && kill $DDGMCP_PID 2>/dev/null
-
-    # Kill Playwright MCP
-    [ -n "$PLAYWRIGHT_MCP_PID" ] && kill $PLAYWRIGHT_MCP_PID 2>/dev/null
+    # Kill all MCP servers via shared helper
+    stop_all_mcp_servers
 
     # Kill the llama server specifically  
     [ -n "$LLAMA_PID" ] && kill $LLAMA_PID 2>/dev/null
@@ -53,31 +52,8 @@ else
     echo "⏭️  Skipping firewall management. Note: You may not be able to access the server remotely if port $PORT is blocked."
 fi
 
-# 1. Ensure the venv exists
-if [ ! -d ".venv" ]; then
-    echo "Creating new virtual environment..."
-    uv venv --python $(which python3)
-fi
-
-# 2. Check if the package is already installed
-# We check for the folder in site-packages to be sure
-if ! ./.venv/bin/python -c "import duckduckgo_mcp_server" &> /dev/null; then
-    echo "Package not found. Installing..."
-    uv pip install \
-        --python ./.venv/bin/python \
-        git+https://github.com/nickclyde/duckduckgo-mcp-server@72140a7136a52d51ec9fdccdd7ff504959d0a5cf
-else
-    echo "DuckDuckGo MCP is already installed. Skipping install."
-fi
-./.venv/bin/duckduckgo-mcp-server --transport streamable-http &
-MCP_PID=$!
-
-# 3. Start Playwright MCP Server (via npx)
-# We run this in standalone mode on port 8931 so llama-server can proxy it via SSE
-# 3. Start Playwright MCP Server
-echo "🚀 Starting Playwright MCP server..."
-npx @playwright/mcp@v0.0.70 --port 8931 --executable-path "$(nix eval --raw nixpkgs#playwright-driver.browsers.outPath)/chromium-1194/chrome-linux/chrome" &
-PLAYWRIGHT_MCP_PID=$!
+# Start all MCP servers (installs deps, starts DDG + Playwright)
+start_all_mcp_servers
 
 # Determine address based on firewall
 if [[ "$OPEN_FIREWALL" = true ]]; then
