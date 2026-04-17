@@ -1,10 +1,10 @@
-# Local LLM for NixOS
+# Local LLM with Nix Flakes
 
 Optimized for **AMD RX 6800XT / Ryzen 7900X** with 32GB RAM.
 
 ![image](./image.png)
 
-## 🚀 Quick Start
+## 🚀 Quick Start - Linux
 
 ### Agentic workflows 
 To start the LLM server and the Pi agent:
@@ -21,11 +21,11 @@ This starts a `llama-server` on `http://0.0.0.0:8080` or `http://<local_ipv4>:80
 
 ---
 
-## 📥 Model Installation
+## Model Installation
 
 Download models into organized subdirectories within `./models/`. This structure allows `llama-server` to automatically discover models when using `--models-dir ./models --models-preset models.ini`.
 
-### Gemma 4 26B (MoE)
+### Gemma 4 26B-4B (MoE)
 *Active parameters: ~4B. High speed, efficient reasoning.*
 ```bash
 nix shell nixpkgs#python313Packages.huggingface-hub -c huggingface-cli download \
@@ -42,7 +42,15 @@ nix shell nixpkgs#python313Packages.huggingface-hub -c huggingface-cli download 
   --local-dir ./models/gemma-4-26b/multimodal
 ```
 
-### Qwen 3.5 35B (MoE)
+### Qwen 3.6 35B-A3B (MoE)
+```bash
+nix run nixpkgs#python313Packages.huggingface-hub -- download \
+  unsloth/Qwen3.6-35B-A3B-GGUF \
+  Qwen3.6-35B-A3B-UD-Q5_K_M.gguf \
+  --local-dir ./models/qwen3.6-35b
+```
+
+### Qwen 3.5 35B-A3B (MoE)
 *Active parameters: ~3B. Extremely fast Mixture of Experts model.*
 [Hugging Face Link](https://huggingface.co/unsloth/Qwen3.5-35B-A3B-GGUF)
 ```bash
@@ -64,7 +72,7 @@ nix shell nixpkgs#python313Packages.huggingface-hub -c huggingface-cli download 
 
 ---
 
-## ⚙️ Hardware Optimizations (AMD GPU)
+## Hardware Optimizations (AMD GPU)
 
 To maximize performance on **AMD RDNA2** hardware, these configurations are applied via `llama-common.sh`:
 
