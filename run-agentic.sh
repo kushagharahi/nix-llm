@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-export PI_VERSION="0.65.2"
+export PI_VERSION="0.67.6"
 export NPM_CONFIG_PREFIX="$(pwd)/.nix-node/v${PI_VERSION}"
 export PATH="$NPM_CONFIG_PREFIX/bin:$PATH"
 # Install pi if not already present at this versioned prefix.
@@ -50,6 +50,6 @@ echo "🟢 llama server ready!"
 
 # Tell the agent to use this repo's local config and session storage (everything in agent-config)
 export PI_CODING_AGENT_DIR="$SCRIPT_DIR/agent-config"
-pi
+PI_TELEMETRY=0 PI_OFFLINE=1 pi
 
 cleanup
