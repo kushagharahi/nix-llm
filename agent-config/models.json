@@ -17,6 +17,12 @@
           "contextWindow": 4096
         },
         {
+          "id": "qwen3.6-35b",
+          "name": "Qwen 3.6 35B",
+          "contextWindow": 262144,
+          "maxTokens": 4096
+        },
+        {
           "id": "qwen3.5-35b",
           "name": "Qwen 3.5 35B",
           "contextWindow": 262144,
