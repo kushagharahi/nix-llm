@@ -32,7 +32,7 @@ Download models into organized subdirectories within `./models/`. This structure
 ### Gemma 4 26B-4B (MoE)
 *Active parameters: ~4B. High speed, efficient reasoning.*
 ```bash
-nix shell nixpkgs#python313Packages.huggingface-hub -c huggingface-cli download \
+nix run nixpkgs#python313Packages.huggingface-hub -- download \
   unsloth/gemma-4-26B-A4B-it-GGUF \
   gemma-4-26B-A4B-it-Q8_0.gguf \
   --local-dir ./models/gemma-4-26b
@@ -40,17 +40,26 @@ nix shell nixpkgs#python313Packages.huggingface-hub -c huggingface-cli download 
 
 #### multimedia projector aka image gen additional download
 ```bash
-nix shell nixpkgs#python313Packages.huggingface-hub -c huggingface-cli download \
+nix run nixpkgs#python313Packages.huggingface-hub -- download \
   unsloth/gemma-4-26B-A4B-it-GGUF \
   mmproj-BF16.gguf \
   --local-dir ./models/gemma-4-26b/multimodal
 ```
 
 ### Qwen 3.6 35B-A3B (MoE)
+#### We choose Q5_K_XL quant because it's the best quant according to unsloth's benchmarks. We can do Q8_0 if we wanted but it'll take up more space
 ```bash
 nix run nixpkgs#python313Packages.huggingface-hub -- download \
   unsloth/Qwen3.6-35B-A3B-GGUF \
-  Qwen3.6-35B-A3B-UD-Q5_K_M.gguf \
+   Qwen3.6-35B-A3B-Q8_0.gguf \
+  --local-dir ./models/qwen3.6-35b
+```
+
+#### multimedia projector aka image gen additional download
+```bash
+nix run nixpkgs#python313Packages.huggingface-hub -- download \
+  unsloth/Qwen3.6-35B-A3B-GGUF \
+  mmproj-BF16.gguf \
   --local-dir ./models/qwen3.6-35b
 ```
 
@@ -58,7 +67,7 @@ nix run nixpkgs#python313Packages.huggingface-hub -- download \
 *Active parameters: ~3B. Extremely fast Mixture of Experts model.*
 [Hugging Face Link](https://huggingface.co/unsloth/Qwen3.5-35B-A3B-GGUF)
 ```bash
-nix shell nixpkgs#python313Packages.huggingface-hub -c huggingface-cli download \
+nix run nixpkgs#python313Packages.huggingface-hub -- download \
   unsloth/Qwen3.5-35B-A3B-GGUF \
   Qwen3.5-35B-A3B-Q5_K_M.gguf \
   --local-dir ./models/qwen3.5-35b
@@ -68,7 +77,7 @@ nix shell nixpkgs#python313Packages.huggingface-hub -c huggingface-cli download 
 *Full parameter computation for consistent depth and reasoning.*
 [Hugging Face Link](https://huggingface.co/unsloth/Qwen3.5-27B-GGUF)
 ```bash
-nix shell nixpkgs#python313Packages.huggingface-hub -c huggingface-cli download \
+nix run nixpkgs#python313Packages.huggingface-hub -- download \
   unsloth/Qwen3.5-27B-GGUF \
   Qwen3.5-27B-Q4_K_M.gguf \
   --local-dir ./models/qwen3.5-27b

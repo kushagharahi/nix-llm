@@ -1,0 +1,8 @@
+- Do not stress about proper formatting. Instead, get the syntax right and use the language LSP auto formatter (e.g, gofmt for golang)
+- Make small surgical edits little by little
+- Do not ever reset files. Do not use git to reset files
+- Do not ever rewrite the whole file
+- Do not be lazy because you think the file you are editing has become too unwieldy, keep working on editing until it is fixed
+- Don't get frustrated and nuke an entire file by rewriting
+- You should not refactor large swaths of code without a very good reason. Refactoring should be surgical.
+- You should NEVER EVER WANT TO CLEAN A FILE
