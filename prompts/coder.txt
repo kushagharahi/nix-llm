@@ -6,3 +6,25 @@
 - Don't get frustrated and nuke an entire file by rewriting
 - You should not refactor large swaths of code without a very good reason. Refactoring should be surgical.
 - You should NEVER EVER WANT TO CLEAN A FILE
+- Do not try to bundle edit tool calls, do s single edit tool call per fix.
+- When you're about to use the edit tool, reevaluate with a read to ensure edit will succeed.
+
+read agent-config/extensions/llama-cpp-tps.ts and agent-config/extensions/TLSR.md the related repos are                                   
+ ~/projects/llama.cpp/tools/server/ and ~/projects/pi-mono/packages/coding-agent/ right now the extension doesn't display anything in the  
+ footer but sends the right stuff to llama-server ebcause i see [43493] prompt eval time =    4233.14 ms /   831 tokens (    5.09 ms per   
+ token,   196.31 tokens per second)                                                                                                        
+ [43493]        eval time =   18246.12 ms /   758 tokens (   24.07 ms per token,    41.54 tokens per second)                               
+ [43493]       total time =   22479.25 ms /  1589 tokens in the logs. add a bunch of debug to figure out the reason it's not working. dont 
+ guess. - Do not stress about proper formatting. Instead, get the syntax right and use the language LSP auto formatter (e.g, gofmt for     
+ golang)                                                                                                                                   
+ - Make small surgical edits little by little                                                                                              
+ - Do not ever reset files. Do not use git to reset files                                                                                  
+ - Do not ever rewrite the whole file                                                                                                      
+ - Do not be lazy because you think the file you are editing has become too unwieldy, keep working on editing until it is fixed            
+ - Don't get frustrated and nuke an entire file by rewriting                                                                               
+ - You should not refactor large swaths of code without a very good reason. Refactoring should be surgical.                                
+ - You should NEVER EVER WANT TO CLEAN A FILE                                                                                              
+ - Do not try to bundle edit tool calls, do s single edit tool call per fix.                                                               
+ - When you're about to use the edit tool, reevaluate with a read to ensure edit will succeed. 
+
+ once you've made changes I can reload and test them (we are in a pi.dev instance). the extension is already wired up, all you have to do is fix the logic.

@@ -23,6 +23,8 @@ import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
 
 const downArrow = "↓";
 
+const LLAMA_CPP_SERVERS = ["localhost:8080", "127.0.0.1:8080", "http://127.0.0.1:8080"];
+
 interface LlamaCppTimings {
 	predicted_n?: number;
 	predicted_ms?: number;
@@ -40,14 +42,10 @@ function isLlamaCpp(baseUrl: string): boolean {
 }
 
 function formatTps(data: LlamaCppTimings): string | null {
-	const predicted =
-		data.predicted_per_second ??
-		(data.predicted_ms && data.predicted_n
-			? Math.round((data.predicted_n / data.predicted_ms) * 1000 * 10) / 10
-			: undefined);
+	const predicted = data.predicted_per_second;
 
 	if (!predicted || predicted <= 0) return null;
-	return `↓${predicted.toFixed(1)} tok/s`;
+	return `${downArrow}${Number(predicted).toFixed(1)} tok/s`;
 }
 
 // ─── Custom streamSimple for llama.cpp ─────────────
@@ -71,10 +69,21 @@ function createLlamaCppStream(
 		...(options?.headers || {}),
 	};
 
-	const messages = (context.messages || []).map((m) => ({
-		role: m.role,
-		content: typeof m.content === "string" ? m.content : JSON.stringify(m.content),
-	}));
+	console.log("[llama-cpp-tps] Requesting model:", model.id);
+
+	const messages = (context.messages || []).map((m) => {
+		let content: any = m.content;
+		if (typeof content !== 'string' && Array.isArray(content)) {
+			// Convert array of objects to a plain text string for llama-server compatibility
+			content = content.filter((c: any) => c?.type === 'text').map((c: any) => c.text).join('\n');
+		} else if (typeof content !== "string") {
+			content = JSON.stringify(m.content);
+		}
+
+		const msg: any = { role: m.role, content };
+		if ('tool_calls' in m && m.tool_calls) msg.tool_calls = m.tool_calls;
+		return msg;
+	});
 	const systemPrompt = (context as any).systemPrompt;
 	if (systemPrompt) {
 		messages.unshift({ role: "system", content: systemPrompt });
@@ -86,6 +95,9 @@ function createLlamaCppStream(
 		stream: true,
 		timings_per_token: true,
 	};
+
+	console.log("[llama-cpp-tps] Payload prepared for:", model.id);
+
 	if (options?.maxTokens) {
 		payload.max_tokens = options.maxTokens;
 	}
@@ -113,12 +125,8 @@ function createLlamaCppStream(
 				provider: model.provider,
 				model: model.id,
 				usage: {
-					input: 0,
-					output: 0,
-					cacheRead: 0,
-					cacheWrite: 0,
-					totalTokens: 0,
-					cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0 },
+					input: 0, own_output_tokens_count: 0, // dummy to avoid issues if types are strict but we'll use output below
+					output: 0, cacheRead: 0, cacheWrite: 0, totalTokens: 0, cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0 },
 				},
 				stopReason: "stop",
 				timestamp: Date.now(),
@@ -143,30 +151,48 @@ function createLlamaCppStream(
 				buffer += new TextDecoder().decode(value, { stream: true });
 				const lines = buffer.split("\n");
 				buffer = lines.pop() || "";
+
 				for (const line of lines) {
 					const trimmed = line.trim();
 					if (!trimmed.startsWith("data: ")) continue;
 					const dataStr = trimmed.slice(6);
-					if (dataStr === "[DONE]") break;
-				try {
-				const chunk: any = JSON.parse(dataStr);
-				if (chunk.timings) { timings = chunk.timings; latestTimings.set(model.id, timings); }
-				if (chunk.usage?.completion_tokens) { output.usage.output = chunk.usage.completion_tokens; output.usage.totalTokens = output.usage.output; }
-				const delta: any = chunk.choices?.[0]?.delta?.content;
-				if (delta) {
-				if (!output.content.length || output.content[0].type !== "text") {
-					output.content.push({ type: "text", text: "" });
+					if (dataStr === "[DONE]") break; console.log("[llama-cpp-tps] dataStr:", dataStr);
+
+					try {
+						const chunk: any = JSON.parse(dataStr); console.log("[llama-cpp-tps] Chunk:", JSON.stringify(chunk));
+						if (chunk.timings) {
+							timings = chunk.timings;
+							latestTimings.set(model.id, timings);
+						}
+						if (chunk.usage?.completion_tokens !== undefined) {
+							output!.usage.output = chunk.usage.completion_tokens;
+							output!.usage.totalTokens = output!.usage.output;
+						}
+
+						const delta: any = chunk.choices?.[0]?.delta;
+						if (delta) {
+							if (delta.content) {
+								if (!output!.content.length || output!.content[0].type !== "text") {
+									output!.content.push({ type: "text", text: "" });
+								}
+								(output!.content[0] as any).text += delta.content;
+								events.push({ type: "text_delta", contentIndex: 0, delta: delta.content, partial: output! });
+							} else if (delta.tool_calls) {
+								// Pass tool calls through to the event stream so the agent can handle them
+								events.push({ type: "tool_call", ...delta });
+							}
+						}
+
+						const finish: any = chunk.choices?.[0]?.finish_reason;
+						if (finish) { output!.stopReason = finish === "stop" ? "stop" : "length"; }
+					} catch (err) {
+						// console.error("[llama-cpp-tps] Error parsing chunk:", err, dataStr); 
+					}
 				}
-				(output.content[0] as any).text += delta;
-				events.push({ type: "text_delta", contentIndex: 0, delta, partial: output });
-				}
-				const finish: any = chunk.choices?.[0]?.finish_reason;
-				if (finish) { output.stopReason = finish === "stop" ? "stop" : "length"; }
-				} catch { /* skip malformed chunks */ }
-				}
+
 				if (dataStr === "[DONE]") break;
-				}
-				if (!output.content.length) { output.content.push({ type: "text", text: "" }); }
+			}
+			if (!output.content.length) { output.content.push({ type: "text", text: "" }); }
 		} catch (error: any) {
 			// Handle error
 			if (!output) {
@@ -206,7 +232,7 @@ function createLlamaCppStream(
 // ─── Extension Entry Point ─────────────────────
 export default function (pi: ExtensionAPI) {
 	let currentModelId: string | undefined;
-	let lastTps: string | null = null;
+	let lastTpsDisplay: string | null = null;
 	let messageStartMs: number | undefined;
 
 	pi.on("message_start", (event) => {
@@ -216,29 +242,39 @@ export default function (pi: ExtensionAPI) {
 	});
 
 	pi.on("message_end", (event, ctx) => {
+		console.log("[llama-cpp-tps] EVENT: message_end role:", event.message?.role, "currentModelId:", currentModelId);
 		if (event.message.role !== "assistant" || !currentModelId) return;
 
 		let display: string | null = null;
 
 		const timings = latestTimings.get(currentModelId);
-		if (timings) {
+		console.log("[llama-cpp-tps] message_end for", currentModelId, "timings:", timings);
+
+		if (timings && timings.predicted_per_second) {
 			display = formatTps(timings);
-		} else if (messageStartMs) {
+		} else if (messageStartMs && event.message.usage?.output) {
 			const elapsedSec = (Date.now() - messageStartMs) / 1000;
-			if (elapsedSec > 0 && event.message.usage?.output) {
-				const tps = Math.round((event.message.usage.output / elapsedSec) * 10) / 10;
+			if (elapsedSec > 0) {
+				const tps = Math.round((event.message.usage!.output / elapsedSec) * 10) / 10;
 				if (tps > 0) display = `${downArrow}${tps.toFixed(1)} tok/s`;
 			}
 		}
 
 		messageStartMs = undefined;
 
-		if (display && display !== lastTps && ctx.hasUI) {
-			lastTps = display;
+		console.log("[llama-cpp-tps] message_end debug - display:", display, "lastTpsDisplay:", lastTpsDisplay, "ctx.hasUI:", ctx.hasUI);
+		if (ctx.hasUI && display) {
+			ctx.ui.notify(`[debug] TPS: ${display}`);
+		}
+
+		if (display && display !== lastTpsDisplay && ctx.hasUI) {
+			lastTpsDisplay = display;
 			ctx.ui.setStatus("llama-cpp-tps", display);
-		} else if (!display && lastTps) {
-			lastTps = null;
+			console.log("[llama-cpp-tps] Setting status:", display);
+		} else if (!display && lastTpsDisplay) {
+			lastTpsDisplay = null;
 			ctx.ui.setStatus("llama-cpp-tps", undefined);
+			console.log("[llama-cpp-tps] Clearing status");
 		}
 	});
 
@@ -252,21 +288,30 @@ export default function (pi: ExtensionAPI) {
 	}
 
 	pi.on("model_select", (event) => {
+		console.log("[llama-cpp-tps] Model selected:", event.model.id, "Provider:", event.model.provider, "BaseURL:", event.model.baseUrl);
 		if (isLlamaCpp(event.model.baseUrl ?? "")) {
 			currentModelId = event.model.id;
 			latestTimings.set(event.model.id, {});
-			lastTps = null;
+			lastTpsDisplay = null;
+			console.log("[llama-cpp-tps] Model selected (is llama-cpp):", currentModelId);
 		} else {
 			currentModelId = undefined;
+			console.log("[llama-cpp-tps] Non-llama model selected:", event.model.id);
 		}
 	});
 
 	pi.on("before_provider_request", (event) => {
+		console.log("[llama-cpp-tps] EVENT: before_provider_request");
 		const payload = event.payload as Record<string, unknown> | undefined;
 		if (!payload || typeof payload !== "object") return;
 		const model = (event as any).model;
 		if (!model || !isLlamaCpp(model.baseUrl ?? "")) return;
-		return { ...payload, timings_per_token: true };
+
+		console.log("[llama-cpp-tps] Intercepting request for:", model.id, "Payload before:", JSON.stringify(payload));
+
+		const newPayload = { ...payload, timings_per_token: true };
+		console.log("[llama-cpp-tps] Payload after adding timings_per_token:", JSON.stringify(newPayload));
+		return newPayload;
 	});
 
 	discoverModels();
@@ -274,7 +319,7 @@ export default function (pi: ExtensionAPI) {
 	pi.on("session_shutdown", () => {
 		latestTimings.clear();
 		currentModelId = undefined;
-		lastTps = null;
+		lastTpsDisplay = null;
 	});
 
 	console.log("llama-cpp-tps: extension loaded");
