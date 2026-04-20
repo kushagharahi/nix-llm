@@ -23,14 +23,14 @@ import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
 
 const downArrow = "↓";
 
-const LLAMA_CPP_SERVERS = ["localhost:8080", "127.0.0.1:8080"];
+const LLAMA_CPP_SERVERS = ["localhost:8080", "127.0.0.1:8080", "http://127.0.0.1:8080"];
 
 interface LlamaCppTimings {
+	predicted_n?: number;
+	predicted_ms?: number;
 	predicted_per_second?: number;
-	prompt_eval_count?: number;
-	prompt_eval_ms?: number;
-	eval_count?: number;
-	eval_ms?: number;
+	prompt_n?: number;
+	prompt_ms?: number;
 }
 
 // Store latest timing data per model
@@ -45,19 +45,7 @@ function formatTps(data: LlamaCppTimings): string | null {
 	const predicted = data.predicted_per_second;
 
 	if (!predicted || predicted <= 0) return null;
-
-	let details = "";
-	if (data.prompt_eval_ms && data.prompt_eval_count && data.prompt_eval_count > 0) {
-		const pMsPerToken = data.prompt_eval_ms / data.prompt_eval_count;
-		details += ` [P:${pMsPerToken.toFixed(1)}ms/t]`;
-	}
-
-	if (data.eval_ms && data.eval_count && data.eval_count > 0) {
-		const eMsPerToken = data.eval_ms / data.eval_count;
-		details += ` [E:${eMsPerToken.toFixed(1)}ms/t]`;
-	}
-
-	return `${downArrow}${Number(predicted).toFixed(1)} tok/s${details}`;
+	return `${downArrow}${Number(predicted).toFixed(1)} tok/s`;
 }
 
 // ─── Custom streamSimple for llama.cpp ─────────────
@@ -66,8 +54,6 @@ function createLlamaCppStream(
 	context: Context,
 	options?: SimpleStreamOptions,
 ): AssistantMessageEventStream {
-
-	console.log("[llama-cpp-tps] Using custom stream handler for model:", model.id);
 
 	// Create a minimal event stream
 	const events: Array<any> = [];
@@ -175,10 +161,8 @@ function createLlamaCppStream(
 					try {
 						const chunk: any = JSON.parse(dataStr); console.log("[llama-cpp-tps] Chunk:", JSON.stringify(chunk));
 						if (chunk.timings) {
-							console.log("[llama-cpp-tps] Received chunk timings:", JSON.stringify(chunk.timings));
-							const updated = { ...(latestTimings.get(model.id) || {}), ...chunk.timings };
-							timings = updated;
-							latestTimings.set(model.id, updated);
+							timings = chunk.timings;
+							latestTimings.set(model.id, timings);
 						}
 						if (chunk.usage?.completion_tokens !== undefined) {
 							output!.usage.output = chunk.usage.completion_tokens;
@@ -249,28 +233,11 @@ function createLlamaCppStream(
 export default function (pi: ExtensionAPI) {
 	let currentModelId: string | undefined;
 	let lastTpsDisplay: string | null = null;
+	let messageStartMs: number | undefined;
 
-	pi.on("message_start", (event: any, ctx: any) => {
-		const model = event?.model || ctx?.model;
-		console.log("[llama-cpp-tps] EVENT: message_start for model:", model?.id, "BaseURL:", model?.baseUrl);
-
-        if (model && isLlamaCpp(model.baseUrl ?? "")) {
-            console.log("[llama-cpp-tps] Detected llama-cpp model on message_start via context/event. Overriding provider...");
-            const providerName = event?.provider || ctx?.provider || model?.provider; 
-            if (providerName) {
-                pi.registerProvider(providerName, {
-                    baseUrl: model.baseUrl,
-                    api: model.api,
-                    streamSimple: createLlamaCppStream,
-                });
-                currentModelId = model.id; // Track it for the end event! 
-            } else {
-                console.log("[llama-cpp-tps] Could not find provider name on message_start.");
-            }
-        }
-
-		if (event?.message?.role === "assistant") {
-			currentModelId = model?.id; // Track it for the end event! 
+	pi.on("message_start", (event) => {
+		if (event.message.role === "assistant") {
+			messageStartMs = Date.now();
 		}
 	});
 
@@ -285,7 +252,15 @@ export default function (pi: ExtensionAPI) {
 
 		if (timings && timings.predicted_per_second) {
 			display = formatTps(timings);
+		} else if (messageStartMs && event.message.usage?.output) {
+			const elapsedSec = (Date.now() - messageStartMs) / 1000;
+			if (elapsedSec > 0) {
+				const tps = Math.round((event.message.usage!.output / elapsedSec) * 10) / 10;
+				if (tps > 0) display = `${downArrow}${tps.toFixed(1)} tok/s`;
+			}
 		}
+
+		messageStartMs = undefined;
 
 		console.log("[llama-cpp-tps] message_end debug - display:", display, "lastTpsDisplay:", lastTpsDisplay, "ctx.hasUI:", ctx.hasUI);
 		if (ctx.hasUI && display) {
@@ -313,24 +288,11 @@ export default function (pi: ExtensionAPI) {
 	}
 
 	pi.on("model_select", (event) => {
-		console.log("[llama-cpp-tps] EVENT: model_select:", JSON.stringify(event, null, 2));
+		console.log("[llama-cpp-tps] Model selected:", event.model.id, "Provider:", event.model.provider, "BaseURL:", event.model.baseUrl);
 		if (isLlamaCpp(event.model.baseUrl ?? "")) {
 			currentModelId = event.model.id;
 			latestTimings.set(event.model.id, {});
 			lastTpsDisplay = null;
-
-			const providerName = (event as any).provider || (event.model as any).provider;
-			if (providerName) {
-				console.log("[llama-cpp-tps] Attempting to override provider:", providerName);
-				pi.registerProvider(providerName, {
-					baseUrl: event.model.baseUrl,
-					api: event.model.api,
-					streamSimple: createLlamaCppStream,
-				});
-			} else {
-				console.log("[llama-cpp-tps] Could not find provider name on model object.");
-			}
-
 			console.log("[llama-cpp-tps] Model selected (is llama-cpp):", currentModelId);
 		} else {
 			currentModelId = undefined;
