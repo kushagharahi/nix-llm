@@ -7,3 +7,4 @@ llama.log
 agent-config/*
 !agent-config/models.json
 !agent-config/settings.json
+!agent-config/extensions
