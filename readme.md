@@ -90,22 +90,17 @@ nix run nixpkgs#python313Packages.huggingface-hub -- download \
 To maximize performance on **AMD RDNA2** hardware, these configurations are applied via `llama-common.sh`:
 
 ### Environment Variables
+#### ROCM
 | Variable | Purpose | Benefit |
 | :--- | :--- | :--- |
 | `HIP_VISIBLE_DEVICES=0` | Selects discrete GPU only (ignores iGPU) to ensure full VRAM availability for model weights. | Prevents resource conflicts and ensures max memory usage. |
 | `GPU_ENABLE_WGP_MODE=0` | Forces scheduling at individual Compute Unit level rather than Workgroup Processors. | Improved math utilization and better layer distribution on RDNA2. |
+
+#### Vulkan
+| Variable | Purpose | Benefit |
+| :--- | :--- | :--- |
 | `AMD_VULKAN_ICD=RADV`  | Uses RADV Vulkan ICD instead of AMD's proprietary driver. | Better compatibility/performance with `llama.cpp`. |
 
-### llama-server Flags
-| Flag | Description | Optimization Goal |
-| :--- | :--- | :--- |
-| `--flash-attn on`     | Enables Flash Attention.                                     | Faster inference and reduced memory overhead.           |
-| `--mlock`              | Locks model in RAM.                                           | Prevents OS swapping; ensures consistent latency.        |
-| `--cache-type-k/v q8_0`* | Quantized KV Cache (varies by model).                         | Significantly reduces VRAM usage for large contexts.     |
-| `--threads 11`         | Fixed CPU thread count optimized for the host architecture.  | Optimized core utilization.                             |
-| `--no-webui`           | Disables Web UI to minimize overhead.                        | Focuses resources on API and Agent performance.          |
-
------
 
 ### M1 Mac 8gb
 
