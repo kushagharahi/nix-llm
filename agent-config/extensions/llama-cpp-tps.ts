@@ -20,10 +20,17 @@ import type {
 	SimpleStreamOptions,
 } from "@mariozechner/pi-ai";
 import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
+import fs from "node:fs";
+const LOG_FILE = "/tmp/llama-cpp-tps.log";
+function log(...args: any[]) {
+	fs.appendFileSync(LOG_FILE, `[${new Date().toISOString()}] ${args.join(" ")}\n`);
+}
+
 
 const downArrow = "↓";
 
-const LLAMA_CPP_SERVERS = ["localhost:8080", "127.0.0.1:8080", "http://127.0.0.1:8080"];
+const LLAMA_CPP_URL = process.env.LLAMA_CPP_URL ?? "http://localhost:8080";
+const LLAMA_CPP_SERVERS = [LLAMA_CPP_URL.replace(/^https?:\/\//, "")];
 
 interface LlamaCppTimings {
 	predicted_n?: number;
@@ -61,6 +68,7 @@ function createLlamaCppStream(
 	const donePromise = new Promise<void>((r) => (resolveDone = r));
 
 	// Build the request
+	log("[llama-cpp-tps] createLlamaCppStream CALLED for:", model.id, "provider:", model.provider, "baseUrl:", model.baseUrl);
 	const baseUrl = model.baseUrl || "http://localhost:8080/v1";
 	const apiKey = options?.apiKey ?? "";
 	const headers: Record<string, string> = {
@@ -69,7 +77,7 @@ function createLlamaCppStream(
 		...(options?.headers || {}),
 	};
 
-	console.log("[llama-cpp-tps] Requesting model:", model.id);
+	log("[llama-cpp-tps] Requesting model:", model.id);
 
 	const messages = (context.messages || []).map((m) => {
 		let content: any = m.content;
@@ -96,7 +104,7 @@ function createLlamaCppStream(
 		timings_per_token: true,
 	};
 
-	console.log("[llama-cpp-tps] Payload prepared for:", model.id);
+	log("[llama-cpp-tps] Payload prepared for:", model.id);
 
 	if (options?.maxTokens) {
 		payload.max_tokens = options.maxTokens;
@@ -156,10 +164,10 @@ function createLlamaCppStream(
 					const trimmed = line.trim();
 					if (!trimmed.startsWith("data: ")) continue;
 					const dataStr = trimmed.slice(6);
-					if (dataStr === "[DONE]") break; console.log("[llama-cpp-tps] dataStr:", dataStr);
+					if (dataStr === "[DONE]") break; log("[llama-cpp-tps] dataStr:", dataStr);
 
 					try {
-						const chunk: any = JSON.parse(dataStr); console.log("[llama-cpp-tps] Chunk:", JSON.stringify(chunk));
+						const chunk: any = JSON.parse(dataStr); log("[llama-cpp-tps] Chunk:", JSON.stringify(chunk));
 						if (chunk.timings) {
 							timings = chunk.timings;
 							latestTimings.set(model.id, timings);
@@ -242,13 +250,15 @@ export default function (pi: ExtensionAPI) {
 	});
 
 	pi.on("message_end", (event, ctx) => {
-		console.log("[llama-cpp-tps] EVENT: message_end role:", event.message?.role, "currentModelId:", currentModelId);
+		log("[llama-cpp-tps] EVENT: message_end role:", event.message?.role, "currentModelId:", currentModelId);
 		if (event.message.role !== "assistant" || !currentModelId) return;
 
 		let display: string | null = null;
 
 		const timings = latestTimings.get(currentModelId);
-		console.log("[llama-cpp-tps] message_end for", currentModelId, "timings:", timings);
+		log("[llama-cpp-tps] message_end for", currentModelId, "timings:", timings);
+		log("[llama-cpp-tps] message_end message.usage:", JSON.stringify(event.message.usage));
+		log("[llama-cpp-tps] message_end message keys:", Object.keys(event.message));
 
 		if (timings && timings.predicted_per_second) {
 			display = formatTps(timings);
@@ -262,7 +272,7 @@ export default function (pi: ExtensionAPI) {
 
 		messageStartMs = undefined;
 
-		console.log("[llama-cpp-tps] message_end debug - display:", display, "lastTpsDisplay:", lastTpsDisplay, "ctx.hasUI:", ctx.hasUI);
+		log("[llama-cpp-tps] message_end debug - display:", display, "lastTpsDisplay:", lastTpsDisplay, "ctx.hasUI:", ctx.hasUI);
 		if (ctx.hasUI && display) {
 			ctx.ui.notify(`[debug] TPS: ${display}`);
 		}
@@ -270,51 +280,71 @@ export default function (pi: ExtensionAPI) {
 		if (display && display !== lastTpsDisplay && ctx.hasUI) {
 			lastTpsDisplay = display;
 			ctx.ui.setStatus("llama-cpp-tps", display);
-			console.log("[llama-cpp-tps] Setting status:", display);
+			log("[llama-cpp-tps] Setting status:", display);
 		} else if (!display && lastTpsDisplay) {
 			lastTpsDisplay = null;
 			ctx.ui.setStatus("llama-cpp-tps", undefined);
-			console.log("[llama-cpp-tps] Clearing status");
+			log("[llama-cpp-tps] Clearing status");
 		}
 	});
 
 	async function discoverModels(): Promise<void> {
 		try {
-			const response = await fetch("http://localhost:8080/v1/models");
+			const response = await fetch(`${LLAMA_CPP_URL}/v1/models`);
 			if (!response.ok) return;
 			const data: any = await response.json();
-		} catch {
+			if (!data.data || !Array.isArray(data.data)) return;
+
+			const models = data.data.map((m: any) => ({
+				id: m.id,
+				name: m.id.split("/").pop() ?? m.id,
+				api: "openai-completions" as Api,
+				provider: "llama-cpp",
+				baseUrl: `${LLAMA_CPP_URL}/v1`,
+				reasoning: false,
+				input: ["text"] as ("text" | "image")[],
+				cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
+				contextWindow: m.context_length ?? 131072,
+				maxTokens: Math.min(m.max_tokens ?? 8192, m.context_length ?? 131072),
+			}));
+
+			if (models.length > 0) {
+				log(`[llama-cpp-tps] registering provider: ${models.length} model(s)`);
+				pi.registerProvider("llama-cpp", {
+					baseUrl: `${LLAMA_CPP_URL}/v1`,
+					apiKey: "none",
+					authHeader: false,
+					api: "openai-completions" as Api,
+					models,
+					streamSimple: createLlamaCppStream as any,
+				});
+			}
+		} catch (err) {
+			log(`[llama-cpp-tps] discoverModels error: ${err}`);
 		}
 	}
 
+	discoverModels();
+
+	// Track current model when selected
 	pi.on("model_select", (event) => {
-		console.log("[llama-cpp-tps] Model selected:", event.model.id, "Provider:", event.model.provider, "BaseURL:", event.model.baseUrl);
-		if (isLlamaCpp(event.model.baseUrl ?? "")) {
+		log("[llama-cpp-tps] Model selected:", event.model.id, "Provider:", event.model.provider);
+		if (event.model.provider === "llama-cpp") {
 			currentModelId = event.model.id;
-			latestTimings.set(event.model.id, {});
-			lastTpsDisplay = null;
-			console.log("[llama-cpp-tps] Model selected (is llama-cpp):", currentModelId);
-		} else {
-			currentModelId = undefined;
-			console.log("[llama-cpp-tps] Non-llama model selected:", event.model.id);
 		}
 	});
 
 	pi.on("before_provider_request", (event) => {
-		console.log("[llama-cpp-tps] EVENT: before_provider_request");
 		const payload = event.payload as Record<string, unknown> | undefined;
 		if (!payload || typeof payload !== "object") return;
-		const model = (event as any).model;
-		if (!model || !isLlamaCpp(model.baseUrl ?? "")) return;
-
-		console.log("[llama-cpp-tps] Intercepting request for:", model.id, "Payload before:", JSON.stringify(payload));
 
 		const newPayload = { ...payload, timings_per_token: true };
-		console.log("[llama-cpp-tps] Payload after adding timings_per_token:", JSON.stringify(newPayload));
 		return newPayload;
 	});
 
-	discoverModels();
+	pi.on("after_provider_response", (event) => {
+		log("[llama-cpp-tps] after_provider_response status:", (event as any).status, "headers:", JSON.stringify((event as any).headers));
+	});
 
 	pi.on("session_shutdown", () => {
 		latestTimings.clear();
@@ -322,5 +352,5 @@ export default function (pi: ExtensionAPI) {
 		lastTpsDisplay = null;
 	});
 
-	console.log("llama-cpp-tps: extension loaded");
+	log("llama-cpp-tps: extension loaded");
 }
