@@ -204,7 +204,7 @@ export default function (pi: ExtensionAPI) {
 			if (display !== lastTpsDisplay) {
 				lastTpsDisplay = display;
 				ctx.ui.setStatus("llama-cpp-tps", display);
-				ctx.ui.notify(`[footer] TPS: ${display}`);
+				ctx.ui.notify(`TPS: ${display}`);
 				log("[llama-cpp-tps] message_end - Set status:", display);
 			}
 		}
