@@ -33,6 +33,20 @@ interface LlamaCppTimings {
 const latestTimings = new Map<string, LlamaCppTimings>();
 let lastTpsDisplay: string | null = null;
 
+// Progress tracking
+interface ProgressData {
+	total?: number;
+	cache?: number;
+	processed?: number;
+	time_ms?: number;
+	pct?: number;
+}
+let latestProgress: ProgressData | undefined;
+let pctProgress: number | undefined;
+
+// Store ctx from turn_start for use in SSE parsing loop (must be before captureTimings)
+let turnCtx: Context | null = null;
+
 function formatTps(data: LlamaCppTimings): string | null {
 	const predicted = data.predicted_per_second;
 	const prompt = data.prompt_per_second;
@@ -42,7 +56,7 @@ function formatTps(data: LlamaCppTimings): string | null {
 	if (!predicted || predicted <= 0) return null;
 
 	if (prompt && prompt > 0) {
-		return `Out: ${downArrow}${Number(predicted).toFixed(1)} tok/s${fmtTime(predictedMs) ? ` (${fmtTime(predictedMs)})` : ""} | In: ${upArrow}${Number(prompt).toFixed(1)} tok/s${fmtTime(promptMs) ? ` (${fmtTime(promptMs)})` : ""} prompt`;
+		return `Out: ${downArrow}${Number(predicted).toFixed(1)} tok/s${fmtTime(predictedMs) ? ` (${fmtTime(predictedMs)})` : ""} | In: ${upArrow}${Number(prompt).toFixed(1)} tok/s${fmtTime(promptMs) ? ` (${fmtTime(promptMs)})` : ""}`;
 	}
 	return `${downArrow}${Number(predicted).toFixed(1)} tok/s${fmtTime(predictedMs) ? ` (${fmtTime(predictedMs)})` : ""}`;
 }
@@ -87,6 +101,21 @@ function captureTimings(
 						if (chunk.timings) {
 							latestTimings.set(modelId, chunk.timings);
 							log("[llama-cpp-tps] TIMINGS captured:", JSON.stringify(chunk.timings));
+						}
+						if (chunk.prompt_progress) {
+							latestProgress = chunk.prompt_progress;
+							const prog = chunk.prompt_progress;
+
+							pctProgress = prog.total && prog.total > 0
+								? Math.round(((prog.processed - (prog.cache ?? 0)) / (prog.total - (prog.cache ?? 0))) * 100)
+								: Math.round((prog.processed / prog.total) * 100);
+							latestProgress.pct = pctProgress;
+
+							log("[llama-cpp-tps] PROGRESS:", prog.processed, "/", prog.total, "cache:", prog.cache ?? 0, "pct:", pctProgress + "%");
+							fs.appendFileSync("/tmp/llama-cpp-tps-progress.log", JSON.stringify({ ...prog, pct: pctProgress }) + "\n");
+							if (turnCtx && turnCtx.hasUI) {
+								turnCtx.ui.setWorkingMessage(`Working... | Prompt Processing ${pctProgress}%`);
+							}
 						}
 					} catch {
 						// ignore parse errors for non-JSON SSE lines
@@ -140,11 +169,39 @@ export default function (pi: ExtensionAPI) {
 		return origStream;
 	}
 
-	// ─── Listen for turn_end (fires after ALL messages in a turn) ───
+	function fmtProgress(p?: number): string {
+		if (!p || p <= 0) return "";
+		if (p >= 100) return "100%";
+		return `${Math.round(p)}%`;
+	}
+
+	// ─── Listen for message_update to show progress during streaming ───
+	// This fires repeatedly as tokens are generated, allowing real-time progress updates
+	const lastProgressDisplay = { value: "" };
+	function updateProgressDisplay(ctx: Context) {
+		if (!latestProgress || !latestProgress.total) return;
+		const display = pctProgress !== undefined
+			? `Working... | Prompt Processing ${pctProgress}%`
+			: `Working... | Prompt Processing ${latestProgress.processed}/${latestProgress.total}`;
+
+		if (display !== lastProgressDisplay.value && ctx.hasUI) {
+			lastProgressDisplay.value = display;
+			ctx.ui.setWorkingMessage(display);
+		}
+	}
+
+	pi.on("message_update", (event, ctx) => {
+		updateProgressDisplay(ctx);
+	});
+
 	// This is more reliable than message_end because by the time it fires,
 	// all SSE chunks have been fully consumed and timings are captured.
 	pi.on("turn_end", (event, ctx) => {
 		log("[llama-cpp-tps] turn_end fired - hasUI:", ctx.hasUI);
+		latestProgress = undefined;
+		pctProgress = undefined;
+		lastProgressDisplay.value = "";
+
 		const keys = Array.from(latestTimings.keys());
 		if (keys.length === 0) {
 			log("[llama-cpp-tps] turn_end - no timings, nothing to display");
@@ -217,11 +274,24 @@ export default function (pi: ExtensionAPI) {
 
 	discoverModels();
 
+	// Store ctx from after_provider_response for real-time progress updates
+	let providerCtx: Context | null = null;
+
+	pi.on("turn_start", (event, ctx) => {
+		turnCtx = ctx;
+		log("[llama-cpp-tps] turn_start fired, hasUI:", ctx.hasUI);
+	});
+
+	pi.on("after_provider_response", (event, ctx) => {
+		providerCtx = ctx;
+		log("[llama-cpp-tps] after_provider_response: providerCtx set, hasUI:", ctx.hasUI);
+	});
+
 	pi.on("before_provider_request", (event) => {
 		const payload = event.payload as Record<string, unknown> | undefined;
 		if (!payload || typeof payload !== "object") return;
-		log("[llama-cpp-tps] before_provider_request: adding timings_per_token to payload");
-		const newPayload: any = { ...payload, timings_per_token: true };
+		log("[llama-cpp-tps] before_provider_request: adding timings_per_token + return_progress to payload");
+		const newPayload: any = { ...payload, timings_per_token: true, return_progress: true };
 		return newPayload;
 	});
 
