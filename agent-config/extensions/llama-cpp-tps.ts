@@ -36,13 +36,21 @@ let lastTpsDisplay: string | null = null;
 function formatTps(data: LlamaCppTimings): string | null {
 	const predicted = data.predicted_per_second;
 	const prompt = data.prompt_per_second;
+	const predictedMs = data.predicted_ms;
+	const promptMs = data.prompt_ms;
 
 	if (!predicted || predicted <= 0) return null;
 
 	if (prompt && prompt > 0) {
-		return `Out: ${downArrow}${Number(predicted).toFixed(1)} tok/s | In: ${upArrow}${Number(prompt).toFixed(1)} tok/s prompt`;
+		return `Out: ${downArrow}${Number(predicted).toFixed(1)} tok/s${fmtTime(predictedMs) ? ` (${fmtTime(predictedMs)})` : ""} | In: ${upArrow}${Number(prompt).toFixed(1)} tok/s${fmtTime(promptMs) ? ` (${fmtTime(promptMs)})` : ""} prompt`;
 	}
-	return `${downArrow}${Number(predicted).toFixed(1)} tok/s`;
+	return `${downArrow}${Number(predicted).toFixed(1)} tok/s${fmtTime(predictedMs) ? ` (${fmtTime(predictedMs)})` : ""}`;
+}
+
+function fmtTime(ms: number | undefined): string {
+	if (!ms || ms <= 0) return "";
+	if (ms < 1000) return `${Math.round(ms)}ms`;
+	return `${(ms / 1000).toFixed(1).replace(/\.0$/, "")}s`;
 }
 
 let _pi: ExtensionAPI | undefined;
