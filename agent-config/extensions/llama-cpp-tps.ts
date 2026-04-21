@@ -303,6 +303,7 @@ function createLlamaCppStream(
 			await donePromise;
 		},
 	} as any;
+}
 
 // ─── Extension Entry Point ─────────────────────
 export default function (pi: ExtensionAPI) {
