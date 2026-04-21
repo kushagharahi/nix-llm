@@ -66,7 +66,7 @@ function scheduleTpsDisplay(modelId: string) {
 		const display = formatTps(timings);
 		if (display && display !== lastTpsDisplay) {
 			lastTpsDisplay = display;
-			_pi.ui.setStatus("llama-cpp-tps", display);
+			(_pi?.ui)?.setStatus("llama-cpp-tps", display);
 			log("[llama-cpp-tps] scheduleTpsDisplay: Set status to:", display);
 		}
 	}, 200);
@@ -86,7 +86,7 @@ function scheduleTpsDisplay(modelId: string) {
 		const newDisplay = formatTps(currentTimings);
 		if (newDisplay && newDisplay !== lastTpsDisplay) {
 			lastTpsDisplay = newDisplay;
-			_pi.ui.setStatus("llama-cpp-tps", newDisplay);
+			(_pi?.ui)?.setStatus("llama-cpp-tps", newDisplay);
 			log("[llama-cpp-tps] scheduleTpsDisplay: Updated status to:", newDisplay);
 		}
 	}, 1000);
@@ -97,214 +97,78 @@ function createLlamaCppStream(
 	context: Context,
 	options?: SimpleStreamOptions,
 ): AssistantMessageEventStream {
+	log("[llama-cpp-tps] createLlamaCppStream CALLED - model.id:", model.id, "provider:", model.provider);
 
-	// DEBUG: Log every call to understand routing
-	log("[llama-cpp-tps] createLlamaCppStream CALLED - model.id:", model.id, "provider:", model.provider, "api:", model.api, "baseUrl:", model.baseUrl);
-
-	const isLlama = model.provider === "llama-cpp";
-	log("[llama-cpp-tps] isLlama (model.provider === 'llama-cpp'):", isLlama);
-
-	// If this is NOT a llama-cpp provider, delegate to the original built-in handler
-	if (!isLlama) {
-		log("[llama-cpp-tps] Delegating non-llama-cpp model to original provider");
-		if (originalOpenAIStreamSimple) {
-			return originalOpenAIStreamSimple(model, context, options);
-		}
-		throw new Error("[llama-cpp-tps] No original provider for non-llama-cpp model " + model.id);
+	// For llama.cpp models, use original stream but intercept fetch to capture timings
+	const origStream = originalOpenAIStreamSimple?.(model, context, options);
+	if (!origStream) {
+		throw new Error("[llama-cpp-tps] No original stream for model " + model.id);
 	}
 
-	log("[llama-cpp-tps] Using custom llama.cpp SSE stream");
+	// Intercept the fetch to capture SSE timings
+	const originalFetch = globalThis.fetch;
+	globalThis.fetch = async (url: any, init?: any) => {
+		const isLlamaCpp = typeof url === 'string' && url.includes('/v1/chat/completions');
+		if (!isLlamaCpp) return originalFetch(url, init);
 
-	const baseUrl = model.baseUrl || `${LLAMA_CPP_URL}/v1`;
-	const apiKey = options?.apiKey ?? "";
-	const headers: Record<string, string> = {
-		"Content-Type": "application/json",
-		...(apiKey ? { Authorization: `Bearer ${apiKey}` } : {}),
-		...(options?.headers || {}),
-	};
+		const response = await originalFetch(url, init);
 
-	log("[llama-cpp-tps] Requesting model:", model.id, "from baseUrl:", baseUrl);
-	log("[llama-cpp-tps] Headers:", JSON.stringify(headers));
+		if (response.ok && response.body) {
+			const reader = response.body.getReader();
+			let buffer = '';
 
-	const messages = (context.messages || []).map((m) => {
-		let content: any = m.content;
-		if (typeof content !== 'string' && Array.isArray(content)) {
-			content = content.filter((c: any) => c?.type === 'text').map((c: any) => c.text).join('\n');
-		} else if (typeof content !== "string") {
-			content = JSON.stringify(m.content);
-		}
+			const newStream = new ReadableStream({
+				async start(controller) {
+					while (true) {
+						const { done, value } = await reader.read();
+						if (done) break;
 
-		const msg: any = { role: m.role, content };
-		if ('tool_calls' in m && m.tool_calls) msg.tool_calls = m.tool_calls;
-		return msg;
-	});
-	log("[llama-cpp-tps] Messages count:", messages.length);
+						buffer += new TextDecoder().decode(value, { stream: true });
+						const lines = buffer.split('\n');
+						buffer = lines.pop() || '';
 
-	const systemPrompt = (context as any).systemPrompt;
-	if (systemPrompt) {
-		messages.unshift({ role: "system", content: systemPrompt });
-		log("[llama-cpp-tps] System prompt added, total messages:", messages.length);
-	}
+						for (const line of lines) {
+							if (!line.startsWith('data: ')) continue;
+							const jsonStr = line.slice(6);
+							if (jsonStr === '[DONE]') break;
 
-	const payload: Record<string, unknown> = {
-		model: model.id,
-		messages,
-		stream: true,
-		timings_per_token: true,
-	};
+							try {
+								const chunk = JSON.parse(jsonStr);
+								if (chunk.timings) {
+									latestTimings.set(model.id, chunk.timings);
+									log("[llama-cpp-tps] TIMINGS captured:", JSON.stringify(chunk.timings));
 
-	log("[llama-cpp-tps] Payload prepared for:", model.id);
+									// Schedule TPS display after stream completes
+									setTimeout(() => {
+										const timings = latestTimings.get(model.id);
+										if (timings?.predicted_per_second) {
+											const display = formatTps(timings);
+											if (display && display !== lastTpsDisplay) {
+												lastTpsDisplay = display;
+												(_pi?.ui)?.setStatus('llama-cpp-tps', display);
+												log("[llama-cpp-tps] TPS:", display);
+											}
+										}
+									}, 200);
+								}
+							} catch { }
+						}
 
-	if (options?.maxTokens) {
-		payload.max_tokens = options.maxTokens;
-	}
-
-	let output: any = {
-		role: "assistant",
-		content: [],
-		api: model.api as Api,
-		provider: model.provider,
-		model: model.id,
-		usage: {
-			input: 0, own_output_tokens_count: 0,
-			output: 0, cacheRead: 0, cacheWrite: 0, totalTokens: 0,
-			cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0 },
-		},
-		stopReason: "stop",
-		timestamp: Date.now(),
-	};
-
-	let timingsData = null;
-	const events: Array<any> = [];
-	let resolveDone: () => void;
-	const donePromise = new Promise<void>((r) => (resolveDone = r));
-
-	(async () => {
-		try {
-			log("[llama-cpp-tps] Sending fetch request to:", baseUrl + "/chat/completions");
-			const response = await fetch(`${baseUrl}/chat/completions`, {
-				method: "POST",
-				headers,
-				body: JSON.stringify(payload),
-				signal: options?.signal,
+						controller.enqueue(value);
+					}
+					controller.close();
+				},
 			});
 
-			log("[llama-cpp-tps] Fetch response status:", response.status);
-
-			if (!response.ok) {
-				const errorText = await response.text();
-				log("[llama-cpp-tps] Fetch error body:", errorText);
-				throw new Error(`HTTP ${response.status}: ${errorText}`);
-			}
-
-			// Emit start
-			events.push({ type: "start", partial: output });
-			log("[llama-cpp-tps] Emitted 'start' event");
-
-			// Read SSE stream
-			const reader = response.body?.getReader();
-			if (!reader) {
-				throw new Error("No response body");
-			}
-
-			let buffer = "";
-			let chunkCount = 0;
-
-			while (true) {
-				const { done: streamDone, value } = await reader.read();
-				if (streamDone) break;
-
-				buffer += new TextDecoder().decode(value, { stream: true });
-				const lines = buffer.split("\n");
-				buffer = lines.pop() || "";
-
-				for (const line of lines) {
-					const trimmed = line.trim();
-					if (!trimmed.startsWith("data: ")) continue;
-					const dataStr = trimmed.slice(6);
-
-					log("[llama-cpp-tps] SSE chunk:", dataStr.substring(0, 200));
-					chunkCount++;
-
-					if (dataStr === "[DONE]") {
-						log("[llama-cpp-tps] Received [DONE], total chunks:", chunkCount);
-						break;
-					}
-
-					try {
-						const chunk: any = JSON.parse(dataStr);
-
-						if (chunk.timings) {
-							timingsData = chunk.timings;
-							latestTimings.set(model.id, timingsData);
-							log("[llama-cpp-tps] TIMINGS set for model:", model.id);
-							log("[llama-cpp-tps] TIMINGS captured:", JSON.stringify(chunk.timings));
-						}
-						if (chunk.usage?.completion_tokens !== undefined) {
-							output!.usage.output = chunk.usage.completion_tokens;
-							output!.usage.totalTokens = output!.usage.output;
-						}
-
-						const delta: any = chunk.choices?.[0]?.delta;
-						if (delta) {
-							if (delta.content) {
-								if (!output!.content.length || output!.content[0].type !== "text") {
-									output!.content.push({ type: "text", text: "" });
-								}
-								(output!.content[0] as any).text += delta.content;
-								events.push({ type: "text_delta", contentIndex: 0, delta: delta.content, partial: output! });
-							} else if (delta.tool_calls) {
-								events.push({ type: "tool_call", ...delta });
-							}
-						}
-
-						const finish: any = chunk.choices?.[0]?.finish_reason;
-						if (finish) {
-							output!.stopReason = finish === "stop" ? "stop" : "length";
-							log("[llama-cpp-tps] Stop reason:", output!.stopReason);
-						}
-					} catch (err) {
-						log("[llama-cpp-tps] Error parsing chunk:", err, dataStr.substring(0, 100));
-					}
-					if (dataStr === "[DONE]") break;
-				}
-			}
-
-			log("[llama-cpp-tps] Stream complete. Final output content length:", output.content.length);
-			log("[llama-cpp-tps] Final timings:", JSON.stringify(timingsData));
-
-			// Set a short timeout to display TPS after stream completes
-			scheduleTpsDisplay(model.id);
-			if (!output.content.length) {
-				output.content.push({ type: "text", text: "" });
-			}
-		} catch (error: any) {
-			log("[llama-cpp-tps] Stream error:", error.message);
-			console.error("[llama-cpp-tps CATCH BLOCK]", "model.id=", model.id);
-			scheduleTpsDisplay(model.id);
-
-			output.stopReason = options?.signal?.aborted ? "aborted" : "error";
-			output.errorMessage = error.message;
-		} finally {
-			events.push({ type: "done", reason: output.stopReason as any, message: output });
-			log("[llama-cpp-tps] Emitted 'done' event, resolving donePromise");
-			resolveDone();
-
+			return new Response(newStream, { status: response.status, headers: Object.fromEntries(response.headers) });
 		}
-	})();
 
-	return {
-		push(event: any) { events.push(event); },
-		end() { resolveDone(); },
-		result() { return Promise.resolve({} as any); },
-		async *[Symbol.asyncIterator]() {
-			log("[llama-cpp-tps] Async iterator started");
-			for (const e of events) yield e;
-			await donePromise;
-		},
-	} as any;
+		return response;
+	};
+
+	log("[llama-cpp-tps] Using original llama.cpp stream with timing interception");
+	return origStream;
 }
-
 // ─── Extension Entry Point ─────────────────────
 export default function (pi: ExtensionAPI) {
 	_pi = pi;
