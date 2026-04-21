@@ -47,11 +47,11 @@ nix run nixpkgs#python313Packages.huggingface-hub -- download \
 ```
 
 ### Qwen 3.6 35B-A3B (MoE)
-#### We choose Q5_K_XL quant because it's the best quant according to unsloth's benchmarks. We can do Q8_0 if we wanted but it'll take up more space
+#### We choose Q6_K_XL quant because it's the best quant according to unsloth's benchmarks. We can do Q8_0 if we wanted but it'll take up more space
 ```bash
 nix run nixpkgs#python313Packages.huggingface-hub -- download \
   unsloth/Qwen3.6-35B-A3B-GGUF \
-   Qwen3.6-35B-A3B-Q8_0.gguf \
+   Qwen3.6-35B-A3B-UD-Q6_K_XL.gguf \
   --local-dir ./models/qwen3.6-35b
 ```
 
