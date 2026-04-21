@@ -24,15 +24,12 @@ interface LlamaCppTimings {
 	predicted_per_second?: number;
 	prompt_n?: number;
 	prompt_ms?: number;
+	prompt_per_second?: number;
 }
 
 // Store latest timing data per model
 const latestTimings = new Map<string, LlamaCppTimings>();
 let lastTpsDisplay: string | null = null;
-
-function isLlamaCpp(baseUrl: string): boolean {
-	return LLAMA_CPP_SERVERS.some((s) => baseUrl?.includes(s));
-}
 
 function formatTps(data: LlamaCppTimings): string | null {
 	const predicted = data.predicted_per_second;
@@ -41,7 +38,7 @@ function formatTps(data: LlamaCppTimings): string | null {
 	if (!predicted || predicted <= 0) return null;
 
 	if (prompt && prompt > 0) {
-		return `${downArrow}${Number(predicted).toFixed(1)} tok/s | ${upArrow}${Number(prompt).toFixed(1)} tok/s prompt`;
+		return `Out: ${downArrow}${Number(predicted).toFixed(1)} tok/s | In: ${upArrow}${Number(prompt).toFixed(1)} tok/s prompt`;
 	}
 	return `${downArrow}${Number(predicted).toFixed(1)} tok/s`;
 }
@@ -52,139 +49,155 @@ let _pi: ExtensionAPI | undefined;
 const originalOpenAIStreamSimple = getApiProvider("openai-completions")?.streamSimple;
 log("[llama-cpp-tps] Original openai-completions streamSimple:", originalOpenAIStreamSimple ? "found" : "NOT FOUND");
 
-function scheduleTpsDisplay(modelId: string) {
-	log("[llama-cpp-tps] scheduleTpsDisplay:", modelId);
+// ─── Per-request fetch interception using AbortController ───
+let activeAbort: AbortController | null = null;
 
-	// Initial display after 200ms
-	setTimeout(() => {
-		if (!_pi) return;
-		const timings = latestTimings.get(modelId);
-		if (!timings || !timings.predicted_per_second) {
-			log("[llama-cpp-tps] scheduleTpsDisplay: no valid timings for", modelId);
-			return;
-		}
-		const display = formatTps(timings);
-		if (display && display !== lastTpsDisplay) {
-			lastTpsDisplay = display;
-			(_pi?.ui)?.setStatus("llama-cpp-tps", display);
-			log("[llama-cpp-tps] scheduleTpsDisplay: Set status to:", display);
-		}
-	}, 200);
+function captureTimings(
+	modelId: string,
+	body: ReadableStream<Uint8Array>,
+): ReadableStream<Uint8Array> {
+	const reader = body.getReader();
+	let buffer = "";
 
-	// Keep updating every second with latest timings
-	let lastUpdate = 0;
-	const refreshInterval = setInterval(() => {
-		if (!_pi) { clearInterval(refreshInterval); return; }
-		const now = Date.now();
-		if (now - lastUpdate < 1000) return;
-		lastUpdate = now;
-		const currentTimings = latestTimings.get(modelId);
-		if (!currentTimings || !currentTimings.predicted_per_second) {
-			clearInterval(refreshInterval);
-			return;
-		}
-		const newDisplay = formatTps(currentTimings);
-		if (newDisplay && newDisplay !== lastTpsDisplay) {
-			lastTpsDisplay = newDisplay;
-			(_pi?.ui)?.setStatus("llama-cpp-tps", newDisplay);
-			log("[llama-cpp-tps] scheduleTpsDisplay: Updated status to:", newDisplay);
-		}
-	}, 1000);
-}
+	return new ReadableStream({
+		async start(controller) {
+			while (true) {
+				const { done, value } = await reader.read();
+				if (done) break;
 
-function createLlamaCppStream(
-	model: PiModel,
-	context: Context,
-	options?: SimpleStreamOptions,
-): AssistantMessageEventStream {
-	log("[llama-cpp-tps] createLlamaCppStream CALLED - model.id:", model.id, "provider:", model.provider);
+				buffer += new TextDecoder().decode(value, { stream: true });
+				const lines = buffer.split("\n");
+				buffer = lines.pop() || "";
 
-	// For llama.cpp models, use original stream but intercept fetch to capture timings
-	const origStream = originalOpenAIStreamSimple?.(model, context, options);
-	if (!origStream) {
-		throw new Error("[llama-cpp-tps] No original stream for model " + model.id);
-	}
+				for (const line of lines) {
+					if (!line.startsWith("data: ")) continue;
+					const jsonStr = line.slice(6);
+					if (jsonStr === "[DONE]") break;
 
-	// Intercept the fetch to capture SSE timings
-	const originalFetch = globalThis.fetch;
-	globalThis.fetch = async (url: any, init?: any) => {
-		const isLlamaCpp = typeof url === 'string' && url.includes('/v1/chat/completions');
-		if (!isLlamaCpp) return originalFetch(url, init);
-
-		const response = await originalFetch(url, init);
-
-		if (response.ok && response.body) {
-			const reader = response.body.getReader();
-			let buffer = '';
-
-			const newStream = new ReadableStream({
-				async start(controller) {
-					while (true) {
-						const { done, value } = await reader.read();
-						if (done) break;
-
-						buffer += new TextDecoder().decode(value, { stream: true });
-						const lines = buffer.split('\n');
-						buffer = lines.pop() || '';
-
-						for (const line of lines) {
-							if (!line.startsWith('data: ')) continue;
-							const jsonStr = line.slice(6);
-							if (jsonStr === '[DONE]') break;
-
-							try {
-								const chunk = JSON.parse(jsonStr);
-								if (chunk.timings) {
-									latestTimings.set(model.id, chunk.timings);
-									log("[llama-cpp-tps] TIMINGS captured:", JSON.stringify(chunk.timings));
-
-									// Schedule TPS display after stream completes
-									setTimeout(() => {
-										const timings = latestTimings.get(model.id);
-										if (timings?.predicted_per_second) {
-											const display = formatTps(timings);
-											if (display && display !== lastTpsDisplay) {
-												lastTpsDisplay = display;
-												(_pi?.ui)?.setStatus('llama-cpp-tps', display);
-												log("[llama-cpp-tps] TPS:", display);
-											}
-										}
-									}, 200);
-								}
-							} catch { }
+					try {
+						const chunk = JSON.parse(jsonStr);
+						if (chunk.timings) {
+							latestTimings.set(modelId, chunk.timings);
+							log("[llama-cpp-tps] TIMINGS captured:", JSON.stringify(chunk.timings));
 						}
-
-						controller.enqueue(value);
+					} catch {
+						// ignore parse errors for non-JSON SSE lines
 					}
-					controller.close();
-				},
-			});
+				}
 
-			return new Response(newStream, { status: response.status, headers: Object.fromEntries(response.headers) });
-		}
+				controller.enqueue(value);
+			}
 
-		return response;
-	};
-
-	log("[llama-cpp-tps] Using original llama.cpp stream with timing interception");
-	return origStream;
+			controller.close();
+			activeAbort = null; // cleanup: no more requests will be intercepted
+			log("[llama-cpp-tps] Stream finished, fetch wrapper released");
+		},
+		cancel(reason?: any) {
+			reader.cancel(reason);
+			activeAbort = null;
+		},
+	});
 }
+
 // ─── Extension Entry Point ─────────────────────
 export default function (pi: ExtensionAPI) {
 	_pi = pi;
 	log("[llama-cpp-tps] Extension loaded. LLAMA_CPP_URL:", LLAMA_CPP_URL);
 	log("[llama-cpp-tps] Current registered providers:", Array.from(pi.events.listeners ? [] : []).join(", "));
 
-	// No model_select handler - user never switches models.
-	// Get model info directly from event.message in message_end instead.
+	// ─── Intercept fetch for llama.cpp timing capture ───
+	// Only intercept ONE request at a time using an AbortController
+	// Each stream gets its own abort signal
+	const originalFetch = globalThis.fetch;
+	globalThis.fetch = async (input: any, init?: any) => {
+		// If another interception is active, pass through
+		if (activeAbort) {
+			log("[llama-cpp-tps] fetch: interception already active, passing through");
+			return originalFetch(input, init);
+		}
 
+		const url = typeof input === "string" ? input : input.url;
+		const isChatCompletions =
+			typeof url === "string" &&
+			url.includes("/v1/chat/completions") &&
+			LLAMA_CPP_SERVERS.some((s) =>
+				(typeof input === "string"
+					? input
+					: input?.url
+				)?.includes(s),
+			);
+
+		if (!isChatCompletions) {
+			return originalFetch(input, init);
+		}
+
+		log("[llama-cpp-tps] fetch: intercepting llama.cpp chat completions request");
+		activeAbort = new AbortController();
+		const response = await originalFetch(input, {
+			...init,
+			signal: activeAbort.signal,
+		});
+
+		if (response.ok && response.body) {
+			return new Response(captureTimings("llama-cpp-model", response.body), {
+				status: response.status,
+				headers: Object.fromEntries(response.headers),
+			});
+		}
+
+		activeAbort = null;
+		return response;
+	};
+
+	function createLlamaCppStream(
+		model: PiModel,
+		context: Context,
+		options?: SimpleStreamOptions,
+	): AssistantMessageEventStream {
+		log("[llama-cpp-tps] createLlamaCppStream CALLED - model.id:", model.id, "provider:", model.provider);
+		const origStream = originalOpenAIStreamSimple?.(model, context, options);
+		if (!origStream) {
+			throw new Error("[llama-cpp-tps] No original stream for model " + model.id);
+		}
+
+	return origStream;
+	}
+
+	// ─── Listen for turn_end (fires after ALL messages in a turn) ───
+	// This is more reliable than message_end because by the time it fires,
+	// all SSE chunks have been fully consumed and timings are captured.
+	pi.on("turn_end", (event, ctx) => {
+		log("[llama-cpp-tps] turn_end fired - hasUI:", ctx.hasUI);
+		const keys = Array.from(latestTimings.keys());
+		if (keys.length === 0) {
+			log("[llama-cpp-tps] turn_end - no timings, nothing to display");
+			return;
+		}
+
+		const latestModelId = keys[keys.length - 1];
+		const timings = latestTimings.get(latestModelId);
+
+		if (!timings || !timings.predicted_per_second) {
+			log("[llama-cpp-tps] turn_end - no valid timings for", latestModelId);
+			return;
+		}
+
+		const display = formatTps(timings);
+
+		if (display && ctx.hasUI) {
+			if (display !== lastTpsDisplay) {
+				lastTpsDisplay = display;
+				ctx.ui.setStatus("llama-cpp-tps", display);
+				ctx.ui.notify(`TPS: ${display}`);
+				log("[llama-cpp-tps] turn_end - Set status:", display);
+			}
+		}
+	});
+
+	// Also keep message_end as a fallback for single-message turns
 	pi.on("message_end", (event, ctx) => {
 		log("[llama-cpp-tps] message_end fired - role:", event.message.role, "hasUI:", ctx.hasUI);
-
-		// message_end message object is empty for assistant messages (pi bug).
-		// Just check if we have captured timings and display the latest.
 		const keys = Array.from(latestTimings.keys());
-
 		if (keys.length === 0) {
 			log("[llama-cpp-tps] message_end - no timings, nothing to display");
 			return;
@@ -272,6 +285,8 @@ export default function (pi: ExtensionAPI) {
 		log("[llama-cpp-tps] session_shutdown: clearing state");
 		latestTimings.clear();
 		lastTpsDisplay = null;
+		activeAbort = null;
+		globalThis.fetch = originalFetch;
 	});
 
 	log("[llama-cpp-tps] extension loaded successfully");
