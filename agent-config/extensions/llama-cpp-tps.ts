@@ -12,13 +12,12 @@ import fs from "node:fs";
 const LOG_FILE = "/tmp/llama-cpp-tps.log";
 const DEBUG = process.env.LLAMA_CPP_EXTENSION_DEBUG === "1";
 function log(...args: any[]) {
-	if (!DEBUG) return;
-	fs.appendFileSync(LOG_FILE, `[${new Date().toISOString()}] ${args.join(" ")}\n`);
+	//if (!DEBUG) return;
+	fs.appendFileSync(LOG_FILE, `[${new Date().toISOString()}] [llama-cpp-tps] ${args.join(" ")}\n`);
 }
 
 const downArrow = "↓";
 const upArrow = "↑";
-const LLAMA_CPP_URL = process.env.LLAMA_CPP_URL ?? "http://localhost:8080";
 
 interface LlamaCppTimings {
 	predicted_n?: number;
@@ -29,10 +28,6 @@ interface LlamaCppTimings {
 	prompt_per_second?: number;
 }
 
-// Store latest timing data per model
-const latestTimings = new Map<string, LlamaCppTimings>();
-let lastTpsDisplay: string | null = null;
-
 // Progress tracking
 interface ProgressData {
 	total?: number;
@@ -41,6 +36,11 @@ interface ProgressData {
 	time_ms?: number;
 	pct?: number;
 }
+
+// Store latest timing data per model
+const latestTimings = new Map<string, LlamaCppTimings>();
+let lastTpsDisplay: string | null = null;
+
 let latestProgress: ProgressData | undefined;
 let pctProgress: number | undefined;
 
@@ -62,16 +62,16 @@ function formatTps(data: LlamaCppTimings): string | null {
 }
 
 function fmtTime(ms: number | undefined): string {
-	if (!ms || ms <= 0) return "";
-	if (ms < 1000) return `${Math.round(ms)}ms`;
+	if (!ms || ms <= 0)
+		return "";
+	if (ms < 1000)
+		return `${Math.round(ms)}ms`;
 	return `${(ms / 1000).toFixed(1).replace(/\.0$/, "")}s`;
 }
 
-let _pi: ExtensionAPI | undefined;
-
 // ─── Save original openai-completions streamSimple BEFORE we override it ───
 const originalOpenAIStreamSimple = getApiProvider("openai-completions")?.streamSimple;
-log("[llama-cpp-tps] Original openai-completions streamSimple:", originalOpenAIStreamSimple ? "found" : "NOT FOUND");
+log("Original openai-completions streamSimple:", originalOpenAIStreamSimple ? "found" : "NOT FOUND");
 
 // ─── Intercept fetch to capture llama.cpp timing data from SSE chunks ───
 function captureTimings(
@@ -100,7 +100,7 @@ function captureTimings(
 						const chunk = JSON.parse(jsonStr);
 						if (chunk.timings) {
 							latestTimings.set(modelId, chunk.timings);
-							log("[llama-cpp-tps] TIMINGS captured:", JSON.stringify(chunk.timings));
+							log("TIMINGS captured:", JSON.stringify(chunk.timings));
 						}
 						if (chunk.prompt_progress) {
 							latestProgress = chunk.prompt_progress;
@@ -111,7 +111,7 @@ function captureTimings(
 								: Math.round((prog.processed / prog.total) * 100);
 							latestProgress.pct = pctProgress;
 
-							log("[llama-cpp-tps] PROGRESS:", prog.processed, "/", prog.total, "cache:", prog.cache ?? 0, "pct:", pctProgress + "%");
+							log("PROGRESS:", prog.processed, "/", prog.total, "cache:", prog.cache ?? 0, "pct:", pctProgress + "%");
 							fs.appendFileSync("/tmp/llama-cpp-tps-progress.log", JSON.stringify({ ...prog, pct: pctProgress }) + "\n");
 							if (turnCtx && turnCtx.hasUI) {
 								turnCtx.ui.setWorkingMessage(`Working... | Prompt Processing ${pctProgress}%`);
@@ -133,11 +133,25 @@ function captureTimings(
 	});
 }
 
+
+// ─── Listen for message_update to show progress during streaming ───
+// This fires repeatedly as tokens are generated, allowing real-time progress updates
+const lastProgressDisplay = { value: "" };
+function updateProgressDisplay(ctx: Context) {
+	if (!latestProgress || !latestProgress.total) return;
+	const display = pctProgress !== undefined
+		? `Working... | Prompt Processing ${pctProgress}%`
+		: `Working... | Prompt Processing ${latestProgress.processed}/${latestProgress.total}`;
+
+	if (display !== lastProgressDisplay.value && ctx.hasUI) {
+		lastProgressDisplay.value = display;
+		ctx.ui.setWorkingMessage(display);
+	}
+}
+
 // ─── Extension Entry Point ─────────────────────
 export default function (pi: ExtensionAPI) {
-	_pi = pi;
-	log("[llama-cpp-tps] Extension loaded. LLAMA_CPP_URL:", LLAMA_CPP_URL);
-	log("[llama-cpp-tps] Current registered providers:", Array.from(pi.events.listeners ? [] : []).join(", "));
+	log("Current registered providers:", Array.from(pi.events.listeners ? [] : []).join(", "));
 
 	const originalFetch = globalThis.fetch;
 	globalThis.fetch = async (input: any, init?: any) => {
@@ -155,40 +169,6 @@ export default function (pi: ExtensionAPI) {
 		return response;
 	};
 
-	function createLlamaCppStream(
-		model: PiModel,
-		context: Context,
-		options?: SimpleStreamOptions,
-	): AssistantMessageEventStream {
-		log("[llama-cpp-tps] createLlamaCppStream CALLED - model.id:", model.id, "provider:", model.provider);
-		const origStream = originalOpenAIStreamSimple?.(model, context, options);
-		if (!origStream) {
-			throw new Error("[llama-cpp-tps] No original stream for model " + model.id);
-		}
-
-		return origStream;
-	}
-
-	function fmtProgress(p?: number): string {
-		if (!p || p <= 0) return "";
-		if (p >= 100) return "100%";
-		return `${Math.round(p)}%`;
-	}
-
-	// ─── Listen for message_update to show progress during streaming ───
-	// This fires repeatedly as tokens are generated, allowing real-time progress updates
-	const lastProgressDisplay = { value: "" };
-	function updateProgressDisplay(ctx: Context) {
-		if (!latestProgress || !latestProgress.total) return;
-		const display = pctProgress !== undefined
-			? `Working... | Prompt Processing ${pctProgress}%`
-			: `Working... | Prompt Processing ${latestProgress.processed}/${latestProgress.total}`;
-
-		if (display !== lastProgressDisplay.value && ctx.hasUI) {
-			lastProgressDisplay.value = display;
-			ctx.ui.setWorkingMessage(display);
-		}
-	}
 
 	pi.on("message_update", (event, ctx) => {
 		updateProgressDisplay(ctx);
@@ -197,14 +177,14 @@ export default function (pi: ExtensionAPI) {
 	// This is more reliable than message_end because by the time it fires,
 	// all SSE chunks have been fully consumed and timings are captured.
 	pi.on("turn_end", (event, ctx) => {
-		log("[llama-cpp-tps] turn_end fired - hasUI:", ctx.hasUI);
+		log("turn_end fired - hasUI:", ctx.hasUI);
 		latestProgress = undefined;
 		pctProgress = undefined;
 		lastProgressDisplay.value = "";
 
 		const keys = Array.from(latestTimings.keys());
 		if (keys.length === 0) {
-			log("[llama-cpp-tps] turn_end - no timings, nothing to display");
+			log("turn_end - no timings, nothing to display");
 			return;
 		}
 
@@ -212,7 +192,7 @@ export default function (pi: ExtensionAPI) {
 		const timings = latestTimings.get(latestModelId);
 
 		if (!timings || !timings.predicted_per_second) {
-			log("[llama-cpp-tps] turn_end - no valid timings for", latestModelId);
+			log("turn_end - no valid timings for", latestModelId);
 			return;
 		}
 
@@ -223,85 +203,32 @@ export default function (pi: ExtensionAPI) {
 				lastTpsDisplay = display;
 				ctx.ui.setStatus("llama-cpp-tps", display);
 				ctx.ui.notify(`TPS: ${display}`);
-				log("[llama-cpp-tps] turn_end - Set status:", display);
+				log("turn_end - Set status:", display);
 			}
 		}
 
 	});
-	async function discoverModels(): Promise<void> {
-		try {
-			log("[llama-cpp-tps] discoverModels: fetching models from", LLAMA_CPP_URL + "/v1/models");
-			const response = await fetch(`${LLAMA_CPP_URL}/v1/models`);
-			log("[llama-cpp-tps] discoverModels: response status:", response.status);
-			if (!response.ok) {
-				log("[llama-cpp-tps] discoverModels: non-OK status, skipping provider registration");
-				return;
-			}
-			const data: any = await response.json();
-			log("[llama-cpp-tps] discoverModels: models data:", JSON.stringify(data));
-			if (!data.data || !Array.isArray(data.data)) return;
-
-			const models = data.data.map((m: any) => ({
-				id: m.id,
-				name: m.id.split("/").pop() ?? m.id,
-				api: "openai-completions" as Api,
-				provider: "llama-cpp",
-				baseUrl: `${LLAMA_CPP_URL}/v1`,
-				reasoning: false,
-				input: ["text"] as ("text" | "image")[],
-				cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
-				contextWindow: m.context_length ?? 131072,
-				maxTokens: Math.min(m.max_tokens ?? 8192, m.context_length ?? 131072),
-			}));
-
-			log("[llama-cpp-tps] discoverModels: registering provider with", models.length, "model(s)");
-			for (const m of models) {
-				log("[llama-cpp-tps]   Model: id=", m.id, "provider=", m.provider, "api=", m.api, "baseUrl=", m.baseUrl);
-			}
-			pi.registerProvider("llama-cpp", {
-				baseUrl: `${LLAMA_CPP_URL}/v1`,
-				apiKey: "none",
-				authHeader: false,
-				api: "openai-completions" as Api,
-				models,
-				streamSimple: createLlamaCppStream as any,
-			});
-			log("[llama-cpp-tps] discoverModels: provider registered successfully");
-		} catch (err: any) {
-			log(`[llama-cpp-tps] discoverModels error: ${err.message}`);
-		}
-	}
-
-	discoverModels();
-
-	// Store ctx from after_provider_response for real-time progress updates
-	let providerCtx: Context | null = null;
 
 	pi.on("turn_start", (event, ctx) => {
 		turnCtx = ctx;
-		log("[llama-cpp-tps] turn_start fired, hasUI:", ctx.hasUI);
-	});
-
-	pi.on("after_provider_response", (event, ctx) => {
-		providerCtx = ctx;
-		log("[llama-cpp-tps] after_provider_response: providerCtx set, hasUI:", ctx.hasUI);
+		log("turn_start fired, hasUI:", ctx.hasUI);
 	});
 
 	pi.on("before_provider_request", (event) => {
 		const payload = event.payload as Record<string, unknown> | undefined;
 		if (!payload || typeof payload !== "object") return;
-		log("[llama-cpp-tps] before_provider_request: adding timings_per_token + return_progress to payload");
+		log("before_provider_request: adding timings_per_token + return_progress to payload");
 		const newPayload: any = { ...payload, timings_per_token: true, return_progress: true };
 		return newPayload;
 	});
 
 	pi.on("session_shutdown", () => {
-		log("[llama-cpp-tps] session_shutdown: clearing state");
+		log("session_shutdown: clearing state");
 		latestTimings.clear();
 		lastTpsDisplay = null;
 
 		globalThis.fetch = originalFetch;
 	});
 
-	log("[llama-cpp-tps] extension loaded successfully");
+	log("extension loaded successfully");
 }
