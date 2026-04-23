@@ -6,33 +6,7 @@
       "apiKey": "local",
       "models": [
         {
-          "id": "gemma-4-26b",
-          "name": "Gemma 4 26B",
-          "contextWindow": 262144,
-          "maxTokens": 4096
-        },
-        {
-          "id": "gemma-4-e2b",
-          "name": "Gemma 4 E2B",
-          "contextWindow": 4096
-        },
-        {
-          "id": "qwen3.6-35b",
-          "name": "Qwen 3.6 35B",
-          "contextWindow": 262144,
-          "maxTokens": 32768
-        },
-        {
-          "id": "qwen3.5-35b",
-          "name": "Qwen 3.5 35B",
-          "contextWindow": 262144,
-          "maxTokens": 4096
-        },
-        {
-          "id": "qwen3.5-27b",
-          "name": "Qwen 3.5 27B",
-          "contextWindow": 65536,
-          "maxTokens": 4096
+          "id": "llama-cpp-discover"
         }
       ]
     }

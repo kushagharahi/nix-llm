@@ -10,7 +10,7 @@ import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
 import fs from "node:fs";
 
 const LOG_FILE = "/tmp/llama-cpp-tps.log";
-const DEBUG = process.env.LLAMA_CPP_TPS_DEBUG === "1";
+const DEBUG = process.env.LLAMA_CPP_EXTENSION_DEBUG === "1";
 function log(...args: any[]) {
 	if (!DEBUG) return;
 	fs.appendFileSync(LOG_FILE, `[${new Date().toISOString()}] ${args.join(" ")}\n`);
