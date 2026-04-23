@@ -78,14 +78,17 @@ function captureTimings(
 	modelId: string,
 	body: ReadableStream<Uint8Array>,
 ): ReadableStream<Uint8Array> {
+	log("captureTimings called for model:", modelId);
 	const reader = body.getReader();
 	let buffer = "";
 
 	return new ReadableStream({
 		async start(controller) {
+		log("captureTimings start() called");
 			while (true) {
 				const { done, value } = await reader.read();
 				if (done) break;
+			log("captureTimings read chunk, len:", value ? value.length : 0);
 
 				buffer += new TextDecoder().decode(value, { stream: true });
 				const lines = buffer.split("\n");
@@ -153,13 +156,18 @@ function updateProgressDisplay(ctx: Context) {
 export default function (pi: ExtensionAPI) {
 	log("Current registered providers:", Array.from(pi.events.listeners ? [] : []).join(", "));
 
+	log("globalThis.fetch exists:", typeof globalThis.fetch);
 	const originalFetch = globalThis.fetch;
+	log("saved originalFetch:", typeof originalFetch);
 	globalThis.fetch = async (input: any, init?: any) => {
 		const url = typeof input === "string" ? input : input.url;
-		if (typeof url !== "string" || !url.includes("/v1/chat/completions")) {
+		log("fetch intercepted, url:", url);
+		if (typeof url !== "string" || !url.includes("/chat/completions")) {
 			return originalFetch(input, init);
 		}
+		log("fetch: routing /v1/chat/completions through captureTimings");
 		const response = await originalFetch(input, init);
+		log("fetch: response status:", response.status, "ok:", response.ok, "body:", response.body ? "present" : "NULL");
 		if (response.ok && response.body) {
 			return new Response(captureTimings("llama-cpp-model", response.body), {
 				status: response.status,
