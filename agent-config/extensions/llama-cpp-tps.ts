@@ -1,18 +1,11 @@
-import type {
-	Api,
-	AssistantMessageEventStream,
-	Context,
-	Model as PiModel,
-	SimpleStreamOptions,
-} from "@mariozechner/pi-ai";
-import { getApiProvider } from "@mariozechner/pi-ai";
+import type { Context } from "@mariozechner/pi-ai";
 import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
 import fs from "node:fs";
 
 const LOG_FILE = "/tmp/llama-cpp-tps.log";
 const DEBUG = process.env.LLAMA_CPP_EXTENSION_DEBUG === "1";
 function log(...args: any[]) {
-	//if (!DEBUG) return;
+	if (!DEBUG) return;
 	fs.appendFileSync(LOG_FILE, `[${new Date().toISOString()}] [llama-cpp-tps] ${args.join(" ")}\n`);
 }
 
@@ -42,10 +35,17 @@ const latestTimings = new Map<string, LlamaCppTimings>();
 let lastTpsDisplay: string | null = null;
 
 let latestProgress: ProgressData | undefined;
-let pctProgress: number | undefined;
 
 // Store ctx from turn_start for use in SSE parsing loop (must be before captureTimings)
 let turnCtx: Context | null = null;
+
+function calcProgressPct(prog: ProgressData): number {
+	const cached = prog.cache ?? 0;
+	if (prog.total && prog.total > 0) {
+		return Math.round(((prog.processed - cached) / (prog.total - cached)) * 100);
+	}
+	return Math.round((prog.processed / prog.total!) * 100);
+}
 
 function formatTps(data: LlamaCppTimings): string | null {
 	const predicted = data.predicted_per_second;
@@ -69,10 +69,6 @@ function fmtTime(ms: number | undefined): string {
 	return `${(ms / 1000).toFixed(1).replace(/\.0$/, "")}s`;
 }
 
-// ─── Save original openai-completions streamSimple BEFORE we override it ───
-const originalOpenAIStreamSimple = getApiProvider("openai-completions")?.streamSimple;
-log("Original openai-completions streamSimple:", originalOpenAIStreamSimple ? "found" : "NOT FOUND");
-
 // ─── Intercept fetch to capture llama.cpp timing data from SSE chunks ───
 function captureTimings(
 	modelId: string,
@@ -84,11 +80,11 @@ function captureTimings(
 
 	return new ReadableStream({
 		async start(controller) {
-		log("captureTimings start() called");
+			log("captureTimings start() called");
 			while (true) {
 				const { done, value } = await reader.read();
 				if (done) break;
-			log("captureTimings read chunk, len:", value ? value.length : 0);
+				log("captureTimings read chunk, len:", value ? value.length : 0);
 
 				buffer += new TextDecoder().decode(value, { stream: true });
 				const lines = buffer.split("\n");
@@ -97,7 +93,7 @@ function captureTimings(
 				for (const line of lines) {
 					if (!line.startsWith("data: ")) continue;
 					const jsonStr = line.slice(6);
-					if (jsonStr === "[DONE]") break;
+					if (jsonStr === "[DONE]") { controller.close(); return; }
 
 					try {
 						const chunk = JSON.parse(jsonStr);
@@ -109,15 +105,12 @@ function captureTimings(
 							latestProgress = chunk.prompt_progress;
 							const prog = chunk.prompt_progress;
 
-							pctProgress = prog.total && prog.total > 0
-								? Math.round(((prog.processed - (prog.cache ?? 0)) / (prog.total - (prog.cache ?? 0))) * 100)
-								: Math.round((prog.processed / prog.total) * 100);
-							latestProgress.pct = pctProgress;
+							prog.pct = calcProgressPct(prog);
 
-							log("PROGRESS:", prog.processed, "/", prog.total, "cache:", prog.cache ?? 0, "pct:", pctProgress + "%");
-							fs.appendFileSync("/tmp/llama-cpp-tps-progress.log", JSON.stringify({ ...prog, pct: pctProgress }) + "\n");
+							log("PROGRESS:", prog.processed, "/", prog.total, "cache:", prog.cache ?? 0, "pct:", prog.pct + "%");
+							fs.appendFileSync("/tmp/llama-cpp-tps-progress.log", JSON.stringify({ ...prog, pct: prog.pct }) + "\n");
 							if (turnCtx && turnCtx.hasUI) {
-								turnCtx.ui.setWorkingMessage(`Working... | Prompt Processing ${pctProgress}%`);
+								turnCtx.ui.setWorkingMessage(`Working... | Prompt Processing ${prog.pct}%`);
 							}
 						}
 					} catch {
@@ -137,21 +130,6 @@ function captureTimings(
 }
 
 
-// ─── Listen for message_update to show progress during streaming ───
-// This fires repeatedly as tokens are generated, allowing real-time progress updates
-const lastProgressDisplay = { value: "" };
-function updateProgressDisplay(ctx: Context) {
-	if (!latestProgress || !latestProgress.total) return;
-	const display = pctProgress !== undefined
-		? `Working... | Prompt Processing ${pctProgress}%`
-		: `Working... | Prompt Processing ${latestProgress.processed}/${latestProgress.total}`;
-
-	if (display !== lastProgressDisplay.value && ctx.hasUI) {
-		lastProgressDisplay.value = display;
-		ctx.ui.setWorkingMessage(display);
-	}
-}
-
 // ─── Extension Entry Point ─────────────────────
 export default function (pi: ExtensionAPI) {
 	log("Current registered providers:", Array.from(pi.events.listeners ? [] : []).join(", "));
@@ -165,7 +143,7 @@ export default function (pi: ExtensionAPI) {
 		if (typeof url !== "string" || !url.includes("/chat/completions")) {
 			return originalFetch(input, init);
 		}
-		log("fetch: routing /v1/chat/completions through captureTimings");
+		log("fetch: routing /chat/completions through captureTimings");
 		const response = await originalFetch(input, init);
 		log("fetch: response status:", response.status, "ok:", response.ok, "body:", response.body ? "present" : "NULL");
 		if (response.ok && response.body) {
@@ -176,19 +154,11 @@ export default function (pi: ExtensionAPI) {
 		}
 		return response;
 	};
-
-
-	pi.on("message_update", (event, ctx) => {
-		updateProgressDisplay(ctx);
-	});
-
 	// This is more reliable than message_end because by the time it fires,
 	// all SSE chunks have been fully consumed and timings are captured.
 	pi.on("turn_end", (event, ctx) => {
 		log("turn_end fired - hasUI:", ctx.hasUI);
 		latestProgress = undefined;
-		pctProgress = undefined;
-		lastProgressDisplay.value = "";
 
 		const keys = Array.from(latestTimings.keys());
 		if (keys.length === 0) {
