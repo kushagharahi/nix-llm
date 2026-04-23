@@ -73,6 +73,16 @@ nix run nixpkgs#python313Packages.huggingface-hub -- download \
   --local-dir ./models/qwen3.5-35b
 ```
 
+### Qwen 3.6 27B (Dense)
+*Full parameter computation for consistent depth and reasoning.*
+[Hugging Face Link](https://huggingface.co/unsloth/Qwen3.5-27B-GGUF)
+```bash
+nix run nixpkgs#python313Packages.huggingface-hub -- download \
+  unsloth/Qwen3.6-27B-GGUF \
+  Qwen3.6-27B-Q4_K_S.gguf \
+  --local-dir ./models/qwen3.6-27b
+```
+
 ### Qwen 3.5 27B (Dense)
 *Full parameter computation for consistent depth and reasoning.*
 [Hugging Face Link](https://huggingface.co/unsloth/Qwen3.5-27B-GGUF)
@@ -82,6 +92,8 @@ nix run nixpkgs#python313Packages.huggingface-hub -- download \
   Qwen3.5-27B-Q4_K_M.gguf \
   --local-dir ./models/qwen3.5-27b
 ```
+
+
 
 ---
 

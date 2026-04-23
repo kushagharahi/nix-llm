@@ -1,7 +1,7 @@
 {
   "lastChangelogVersion": "0.67.6",
   "defaultProvider": "llama-cpp",
-  "defaultModel": "gemma-4-26b",
+  "defaultModel": "qwen3.6-27b",
   "enableInstallTelemetry": false,
   "hideThinkingBlock": false
 }
