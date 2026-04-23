@@ -7,14 +7,20 @@
  * and registers them.
  * 
  * Minimal models.json:
- * {
- *   "providers": {
- *     "llama-cpp": {
- *       "baseUrl": "http://127.0.0.1:8080",
- *       "api": "openai-completions"
- *     }
- *   }
- * }
+{
+	"providers": {
+		"${PROVIDER}": { <--- key
+		"baseUrl": "http://127.0.0.1:8080",
+		"api": "openai-completions",
+		"apiKey": "local",
+		"models": [
+			{
+			"id": "${MODEL_ID}" <--- key
+			}
+		]
+		}
+	}
+}
  */
 
 import type {

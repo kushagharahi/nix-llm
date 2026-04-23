@@ -93,8 +93,6 @@ nix run nixpkgs#python313Packages.huggingface-hub -- download \
   --local-dir ./models/qwen3.5-27b
 ```
 
-
-
 ---
 
 ## Hardware Optimizations (AMD GPU)
