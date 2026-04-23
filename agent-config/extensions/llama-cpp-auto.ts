@@ -111,8 +111,18 @@ function transformLlamaCppModels(input: llamaCppModels): ProviderModelConfig.mod
 				? parseInt(args["n_predict"] || args["ctx-size"], 10)
 				: 0,
 
-			// reasoning not set because llama.cpp defines this
-			// input, cost, compat not supported at this time
+			// hardcoded below
+			// if not defined:  Error: Cannot read properties of undefined (reading 'includes')
+			// see: https://github.com/badlogic/pi-mono/issues/1167
+			// and: https://github.com/badlogic/pi-mono/issues/1028
+			input: "text",
+			cost: {
+				input: 0,
+				output: 0,
+				cacheRead: 0,
+				cacheWrite: 0
+			},
+			reasoning: false
 		};
 	});
 }
@@ -176,7 +186,7 @@ export default function (pi: ExtensionAPI) {
 			let apiKeyAndHeaders = await currentCtx.modelRegistry.getApiKeyAndHeaders({ provider: PROVIDER, id: MODEL_ID })
 
 			let updatedProvider: ProviderConfigInput = {
-				baseUrl: llamaProvider[0]?.baseUrl,
+				baseUrl: llamaProvider[0].baseUrl,
 				apiKey: apiKeyAndHeaders?.apiKey,
 				api: llamaProvider[0]?.api,
 				headers: apiKeyAndHeaders?.headers,
