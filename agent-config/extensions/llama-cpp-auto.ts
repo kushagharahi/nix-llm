@@ -28,7 +28,6 @@ import type {
 	ExtensionContext,
 	ExtensionAPI,
 	Model,
-	ProviderModelConfig,
 	ProviderConfigInput
 } from "@mariozechner/pi-coding-agent";
 import fs from "node:fs";
@@ -189,7 +188,7 @@ export default function (pi: ExtensionAPI) {
 			let autoDiscoveredModels = transformLlamaCppModels(llamaCppModels)
 			log(`autoDiscoveredModels ${JSON.stringify(autoDiscoveredModels)}`)
 
-			let apiKeyAndHeaders = await currentCtx.modelRegistry.getApiKeyAndHeaders({ provider: PROVIDER, id: MODEL_ID })
+			const apiKeyAndHeaders = await currentCtx.modelRegistry.getApiKeyAndHeaders({ provider: PROVIDER, id: MODEL_ID })
 
 			let updatedProvider: ProviderConfigInput = {
 				baseUrl: llamaProvider[0].baseUrl,
