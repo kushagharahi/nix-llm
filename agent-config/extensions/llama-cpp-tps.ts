@@ -42,9 +42,9 @@ let turnCtx: Context | null = null;
 function calcProgressPct(prog: ProgressData): number {
 	const cached = prog.cache ?? 0;
 	if (prog.total && prog.total > 0) {
-		return Math.round(((prog.processed - cached) / (prog.total - cached)) * 100);
+		return Math.round(((prog.processed ?? 0) - cached) / (prog.total - cached) * 100);
 	}
-	return Math.round((prog.processed / prog.total!) * 100);
+	return Math.round(((prog.processed ?? 0) / prog.total!) * 100);
 }
 
 function formatTps(data: LlamaCppTimings): string | null {
@@ -107,11 +107,12 @@ function captureTimings(
 
 							prog.pct = calcProgressPct(prog);
 
-							log("PROGRESS:", prog.processed, "/", prog.total, "cache:", prog.cache ?? 0, "pct:", prog.pct + "%");
-							fs.appendFileSync("/tmp/llama-cpp-tps-progress.log", JSON.stringify({ ...prog, pct: prog.pct }) + "\n");
 							if (turnCtx && turnCtx.hasUI) {
 								turnCtx.ui.setWorkingMessage(`Working... | Prompt Processing ${prog.pct}%`);
 							}
+
+							log("PROGRESS:", prog.processed, "/", prog.total, "cache:", prog.cache ?? 0, "pct:", prog.pct + "%");
+							fs.appendFileSync("/tmp/llama-cpp-tps-progress.log", JSON.stringify({ ...prog, pct: prog.pct }) + "\n");
 						}
 					} catch {
 						// ignore parse errors for non-JSON SSE lines
