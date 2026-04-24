@@ -34,8 +34,6 @@ interface ProgressData {
 const latestTimings = new Map<string, LlamaCppTimings>();
 let lastTpsDisplay: string | null = null;
 
-let latestProgress: ProgressData | undefined;
-
 // Store ctx from turn_start for use in SSE parsing loop (must be before captureTimings)
 let turnCtx: Context | null = null;
 
@@ -102,18 +100,28 @@ function captureTimings(
 							log("TIMINGS captured:", JSON.stringify(chunk.timings));
 						}
 						if (chunk.prompt_progress) {
-							latestProgress = chunk.prompt_progress;
 							const prog = chunk.prompt_progress;
 
 							prog.pct = calcProgressPct(prog);
 
-							if (turnCtx && turnCtx.hasUI) {
-								turnCtx.ui.setWorkingMessage(`Working... | Prompt Processing ${prog.pct}%`);
+							if (!turnCtx) {
+								fs.appendFileSync(LOG_FILE, "[PROGRESS] t=" + Date.now() + " turnCtx is NULL\n");
+							} else if (!turnCtx.hasUI) {
+								fs.appendFileSync(LOG_FILE, "[PROGRESS] t=" + Date.now() + " turnCtx.hasUI is false\n");
+							} else {
+								try {
+									const msg = `Working... | Prompt Processing ${prog.pct}%`;
+									turnCtx.ui.setWorkingMessage(msg);
+									fs.appendFileSync(LOG_FILE, "[PROGRESS] t=" + Date.now() + " setWorkingMessage: [" + msg + "]\n");
+								} catch (err) {
+									fs.appendFileSync(LOG_FILE, "[PROGRESS] setWorkingMessage ERROR: " + String(err) + "\n");
+								}
 							}
 
 							log("PROGRESS:", prog.processed, "/", prog.total, "cache:", prog.cache ?? 0, "pct:", prog.pct + "%");
 							fs.appendFileSync("/tmp/llama-cpp-tps-progress.log", JSON.stringify({ ...prog, pct: prog.pct }) + "\n");
 						}
+
 					} catch {
 						// ignore parse errors for non-JSON SSE lines
 					}
@@ -159,7 +167,6 @@ export default function (pi: ExtensionAPI) {
 	// all SSE chunks have been fully consumed and timings are captured.
 	pi.on("turn_end", (event, ctx) => {
 		log("turn_end fired - hasUI:", ctx.hasUI);
-		latestProgress = undefined;
 
 		const keys = Array.from(latestTimings.keys());
 		if (keys.length === 0) {
