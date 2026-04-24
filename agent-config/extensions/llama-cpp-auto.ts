@@ -199,8 +199,16 @@ export default function (pi: ExtensionAPI) {
 				// //OAUTH NOT SUPPORTED
 				models: autoDiscoveredModels
 			}
+			const wasOnDiscoverModel = currentCtx.model?.provider === PROVIDER && currentCtx.model?.id === MODEL_ID
 
 			pi.registerProvider(PROVIDER, updatedProvider)
+
+			if (wasOnDiscoverModel && autoDiscoveredModels.length > 0) {
+				const firstModel = currentCtx.modelRegistry.find(PROVIDER, autoDiscoveredModels[0].id)
+				if (firstModel) {
+					pi.setModel(firstModel)
+				}
+			}
 
 		} catch (err: unknown) {
 			const msg = err instanceof Error ? err.message : String(err);
