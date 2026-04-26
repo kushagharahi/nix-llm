@@ -6,12 +6,17 @@ Optimized for **AMD RX 6800XT / Ryzen 7900X** with 32GB RAM.
 
 ## 🚀 Quick Start - Linux
 
-### Agentic workflows 
+### Agentic workflows
 To start the LLM server and the Pi agent:
 ```bash
 nix-develop .#agentic
 ```
 This starts a `llama-server` on `http://127.0.0.1:8080` and launches the `pi.dev` TUI pointing to it.
+
+> **Note:** The agentic shell uses a `shellHook` that exports the `shellHook` env var. If you run
+> `nix-shell -p <pkg>` from within the agentic shell, the child inherits this variable and
+> re-runs the hook (spawning a second llama server). Use `nix-shell --pure -p <pkg>` or
+> `unset shellHook && nix-shell -p <pkg>` to avoid this.
 
 ### llama.cpp chat interface 
 ```bash
