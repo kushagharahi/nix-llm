@@ -75,6 +75,7 @@ function captureTimings(
 	log("captureTimings called for model:", modelId);
 	const reader = body.getReader();
 	let buffer = "";
+	const decoder = new TextDecoder();
 
 	return new ReadableStream({
 		async start(controller) {
@@ -84,14 +85,14 @@ function captureTimings(
 				if (done) break;
 				log("captureTimings read chunk, len:", value ? value.length : 0);
 
-				buffer += new TextDecoder().decode(value, { stream: true });
+				buffer += decoder.decode(value, { stream: true });
 				const lines = buffer.split("\n");
 				buffer = lines.pop() || "";
 
 				for (const line of lines) {
 					if (!line.startsWith("data: ")) continue;
 					const jsonStr = line.slice(6);
-					if (jsonStr === "[DONE]") { controller.close(); return; }
+					if (jsonStr === "[DONE]") { controller.enqueue(value); decoder.decode(); controller.close(); return; }
 
 					try {
 						const chunk = JSON.parse(jsonStr);
@@ -129,6 +130,8 @@ function captureTimings(
 
 				controller.enqueue(value);
 			}
+
+			decoder.decode(); // flush any remaining multi-byte sequences
 
 			controller.close();
 		},
