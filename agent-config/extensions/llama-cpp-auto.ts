@@ -20,7 +20,7 @@
 		]
 		}
 	}
-}
+	}
  */
 
 import type {
@@ -165,6 +165,12 @@ export default function (pi: ExtensionAPI) {
 }`)
 			}
 
+			// Check router mode first — /models/load only exists in router mode (server.cpp:168)
+			const isRouter = await checkRouterMode(llamaProvider[0].baseUrl);
+			if (!isRouter) {
+				currentCtx.ui.notify("llama-cpp auto-discover: server is not in router mode", "warning");
+				return;
+			}
 			const url = `${llamaProvider[0].baseUrl}/models`;
 			log(`Querying ${url}`);
 
@@ -179,8 +185,7 @@ export default function (pi: ExtensionAPI) {
 			}
 
 			if (llamaCppModels.data.length === 0) {
-				log(`Server returned no models`);
-				return;
+				throw new Error(`Server returned no models`);
 			}
 
 			log(`Got models from llama-cpp: ${JSON.stringify(llamaCppModels)}`)
@@ -213,6 +218,21 @@ export default function (pi: ExtensionAPI) {
 		} catch (err: unknown) {
 			const msg = err instanceof Error ? err.message : String(err);
 			log(`Failed to discover models: ${msg}`);
+		}
+	}
+
+
+	// Probe /models/load — registered only in router mode (server.cpp:168)
+	async function checkRouterMode(baseUrl: string): Promise<boolean> {
+		try {
+			const res = await fetch(`${baseUrl}/props`);
+			if (!res.ok) return false;
+			const body = await res.json();
+			return body.role === "router";
+		} catch {
+			log(`Failed to probe ${baseUrl}/models/load`);
+			return false;
+
 		}
 	}
 }
