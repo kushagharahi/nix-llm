@@ -39,6 +39,10 @@ function log(...args: any[]) {
 	fs.appendFileSync(LOG_FILE, `[${new Date().toISOString()}] [llama-cpp-auto] ${args.join(" ")}\n`);
 }
 
+function notify(message: string, ctx: ExtensionContext) {
+	ctx.ui.notify(`[llama-cpp auto-discover] ${message}`, "warning")
+}
+
 const PROVIDER = "llama-cpp"
 const MODEL_ID = "llama-cpp-discover"
 
@@ -148,27 +152,27 @@ export default function (pi: ExtensionAPI) {
 			let llamaProvider = registeredModels.filter(m => m.provider == PROVIDER && m.id == MODEL_ID)
 
 			if (llamaProvider.length != 1) {
-				throw new Error(`Found ${llamaProvider.length} llama-cpp providers/models. Only one should be specified in the shape of:
-{
-	"providers": {
-		"${PROVIDER}": { <--- key
+				notify(`Found ${llamaProvider.length} llama - cpp providers / models.Only one should be specified in the shape of:
+		{
+			"providers": {
+				"${PROVIDER}": { < --- key
 		"baseUrl": "http://127.0.0.1:8080",
-		"api": "openai-completions",
-		"apiKey": "local",
-		"models": [
-			{
-			"id": "${MODEL_ID}" <--- key
+				"api": "openai-completions",
+				"apiKey": "local",
+				"models": [
+					{
+						"id": "${MODEL_ID}" < --- key
+					}
+				]
 			}
-		]
 		}
-	}
-}`)
+} `, currentCtx)
 			}
 
 			// Check router mode first — /models/load only exists in router mode (server.cpp:168)
 			const isRouter = await checkRouterMode(llamaProvider[0].baseUrl);
 			if (!isRouter) {
-				currentCtx.ui.notify("llama-cpp auto-discover: server is not in router mode", "warning");
+				notify("server is not in router mode", currentCtx);
 				return;
 			}
 			const url = `${llamaProvider[0].baseUrl}/models`;
@@ -176,16 +180,16 @@ export default function (pi: ExtensionAPI) {
 
 			const response = await fetch(url);
 			if (!response.ok) {
-				throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+				notify(`HTTP ${response.status}: ${response.statusText}`, currentCtx);
 			}
 
 			const llamaCppModels: llamaCppModels = await response.json();
 			if (!llamaCppModels.data || !Array.isArray(llamaCppModels.data)) {
-				throw new Error("Invalid response format from llama.cpp server");
+				notify("Invalid response format from llama.cpp server", currentCtx);
 			}
 
 			if (llamaCppModels.data.length === 0) {
-				throw new Error(`Server returned no models`);
+				notify(`Server returned no models`, currentCtx);
 			}
 
 			log(`Got models from llama-cpp: ${JSON.stringify(llamaCppModels)}`)
@@ -217,7 +221,7 @@ export default function (pi: ExtensionAPI) {
 
 		} catch (err: unknown) {
 			const msg = err instanceof Error ? err.message : String(err);
-			log(`Failed to discover models: ${msg}`);
+			notify(`Failed to discover models: ${msg}`, currentCtx);
 		}
 	}
 
