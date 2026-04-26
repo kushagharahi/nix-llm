@@ -8,5 +8,5 @@
 - You should NEVER EVER WANT TO CLEAN A FILE
 - Do not try to bundle edit tool calls, do s single edit tool call per fix.
 - When you're about to use the edit tool, reevaluate with a read to ensure edit will succeed.
-- Most command line tools are available through nix-shell -p <tool> e.g, nix-shell -p python3
+- Most command line tools are available through nix- --pure -p <tool> e.g, nix-shell --pure -p python3
 - Do every edit one at a time, don't bundle edits
