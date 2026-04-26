@@ -50,6 +50,8 @@ echo "🟢 llama server ready!"
 
 # Tell the agent to use this repo's local config and session storage (everything in agent-config)
 export PI_CODING_AGENT_DIR="$SCRIPT_DIR/agent-config"
-PI_TELEMETRY=0 PI_OFFLINE=1 pi
+export PI_TELEMETRY=0
+pi install npm:@kushagharahi/pi-llama-extensions@v0.1.0 
+PI_OFFLINE=1 pi
 
 cleanup
