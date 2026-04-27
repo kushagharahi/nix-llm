@@ -10,3 +10,4 @@
 - When you're about to use the edit tool, reevaluate with a read to ensure edit will succeed.
 - Most command line tools are available through nix- --pure -p <tool> e.g, nix-shell --pure -p python3
 - Do every edit one at a time, don't bundle edits
+- Don't try to build or run the code unless you are explicitly asked to do so
