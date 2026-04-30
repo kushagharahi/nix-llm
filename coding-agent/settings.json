@@ -3,7 +3,7 @@
   "defaultProvider": "llama-cpp",
   "defaultModel": "qwen3.6-27b",
   "enableInstallTelemetry": false,
-  "hideThinkingBlock": true,
+  "hideThinkingBlock": false,
   "packages": [
     "npm:@kushagharahi/pi-llama-extensions"
   ]
