@@ -1,0 +1,10 @@
+{
+  "lastChangelogVersion": "0.70.6",
+  "defaultProvider": "llama-cpp",
+  "defaultModel": "qwen3.6-27b",
+  "enableInstallTelemetry": false,
+  "hideThinkingBlock": true,
+  "packages": [
+    "npm:@kushagharahi/pi-llama-extensions"
+  ]
+}

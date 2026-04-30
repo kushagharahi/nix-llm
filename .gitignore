@@ -4,7 +4,7 @@ llama.log
 .nix-node/*
 .playwright-runtime/*
 .playwright-mcp/*
-agent-config/*
-!agent-config/models.json
-!agent-config/settings.json
-!agent-config/extensions
+coding-agent/*
+!coding-agent/models.json
+!coding-agent/settings.json
+!coding-agent/extensions

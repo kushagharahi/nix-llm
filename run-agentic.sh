@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-export PI_VERSION="0.67.6"
+export PI_VERSION="0.70.6"
 export NPM_CONFIG_PREFIX="$(pwd)/.nix-node/v${PI_VERSION}"
 export PATH="$NPM_CONFIG_PREFIX/bin:$PATH"
 # Install pi if not already present at this versioned prefix.
@@ -49,7 +49,7 @@ done
 echo "🟢 llama server ready!"
 
 # Tell the agent to use this repo's local config and session storage (everything in agent-config)
-export PI_CODING_AGENT_DIR="$SCRIPT_DIR/agent-config"
+export PI_CODING_AGENT_DIR="$SCRIPT_DIR/coding-agent"
 export PI_TELEMETRY=0
 pi install npm:@kushagharahi/pi-llama-extensions@v0.1.0 
 PI_OFFLINE=1 pi
