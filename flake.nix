@@ -5,7 +5,7 @@
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
     llama-cpp-repo = {
       #url = "/Users/kushag/Documents/Projects/llama.cpp";
-      url = "github:ggml-org/llama.cpp/b8966";
+      url = "github:ggml-org/llama.cpp/098705a29e83d2352e9ff1a266afd8eccd6ebad2";
       # Force llama.cpp's flake to use OUR nixpkgs version
       # (llama.cpp is pinned to 25.05)
       inputs.nixpkgs.follows = "nixpkgs";
